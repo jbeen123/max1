@@ -15,59 +15,51 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase12_ops_automation_offbox
+   npx prisma migrate dev --name phase13_scheduler_lock_queue
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 12 added
+## What phase 13 added
 
-- **Cron wiring path**
-  - Script: `scripts/cron-phase12.sh`
-  - Runs maintenance + attestation + upload in sequence
-  - Uses `x-edge-secret` with `EDGE_SHARED_SECRET`
-- **Off-box attestation upload**
-  - `POST /api/admin/ops/attest-audit/upload`
-  - Uses `OFFBOX_ATTESTATION_URL` (+ optional bearer token)
-  - Upload helper: `lib/storage/attestation-upload.ts`
-- **Admin ops dashboard UI**
-  - New page: `/admin/ops`
-  - Shows recent attestation records + latest prune timestamp
-- **Ops access helper for automation**
-  - `lib/auth-edge.ts` enables trusted edge/system calls with shared secret
+- **Scheduler lock (concurrency guard)**
+  - `OpsLock` model
+  - `run-maintenance` now acquires/release lock, preventing concurrent runs
+- **Retry/backoff upload queue**
+  - `UploadJob` model + `UploadJobStatus`
+  - `lib/queue/upload-queue.ts` handles queue processing with exponential backoff
+  - `attest-audit/upload` now enqueues jobs and processes queue batch
+- **Manual ops controls in UI**
+  - Added `OpsActions` component on `/admin/ops`
+  - One-click actions for maintenance, attestation, and upload
 
 ## API highlights
 
 - `POST /api/admin/ops/run-maintenance`
-- `POST /api/admin/ops/prune-rate-limits?keepHours=72`
 - `POST /api/admin/ops/attest-audit`
 - `POST /api/admin/ops/attest-audit/upload`
+- `POST /api/admin/ops/prune-rate-limits?keepHours=72`
 - `GET /api/admin/audit/verify`
 
-## Automation example (cron)
+## Data model additions (phase 13)
 
-Run every hour:
+- `OpsLock`
+- `UploadJob`
+- `UploadJobStatus` enum
 
-```bash
-0 * * * * cd /home/jahffy/.openclaw/workspace/market-ai && EDGE_SHARED_SECRET='your-secret' BASE_URL='http://localhost:3000' ./scripts/cron-phase12.sh >> /tmp/marketai-maint.log 2>&1
-```
+## Automation notes
 
-## Env vars (phase 12)
-
-- `EDGE_SHARED_SECRET`
-- `OFFBOX_ATTESTATION_URL`
-- `OFFBOX_ATTESTATION_TOKEN`
-
-(Existing important vars: `AUDIT_CHAIN_SECRET`, `INVITE_LINK_SECRET`, `RESEND_API_KEY`, auth vars)
+- Keep `scripts/cron-phase12.sh` and call it on schedule.
+- Locking prevents overlapping runs if cron overlaps.
+- Failed uploads remain queued and retry automatically on next maintenance run.
 
 ## Next production tasks
 
-- Replace HTTP off-box upload with signed object-store upload (S3/R2) + checksum manifest.
-- Add retry/backoff + dead-letter handling for failed uploads.
-- Add explicit scheduler lock to avoid concurrent maintenance runs.
-- Build ops UI buttons for manual run + upload trigger.
+- Add dedicated worker process for queue processing (instead of request path).
+- Add dead-letter queue UI + replay controls.
+- Add stronger lock ownership token/heartbeat renewal.
 
 ## Legal notes
 

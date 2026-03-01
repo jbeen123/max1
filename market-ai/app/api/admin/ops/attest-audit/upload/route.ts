@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { uploadAttestationOffbox } from "@/lib/storage/attestation-upload";
 import { logAudit } from "@/lib/audit";
 import { isEdgeTrusted } from "@/lib/auth-edge";
+import { enqueueAttestationUpload, processUploadQueue } from "@/lib/queue/upload-queue";
 import fs from "fs/promises";
 
 export async function POST(req: Request) {
@@ -16,15 +16,17 @@ export async function POST(req: Request) {
 
   const raw = await fs.readFile(latest.storagePath, "utf-8");
   const payload = JSON.parse(raw);
-  const upload = await uploadAttestationOffbox(payload);
+
+  const enqueued = await enqueueAttestationUpload(latest.id, payload);
+  const processed = await processUploadQueue(3);
 
   await logAudit({
     actorId: auth.user?.id ?? null,
-    action: "AUDIT_ATTESTATION_UPLOADED",
-    targetType: "AuditAttestation",
-    targetId: latest.id,
-    metadata: upload,
+    action: "AUDIT_ATTESTATION_UPLOAD_ENQUEUED",
+    targetType: "UploadJob",
+    targetId: enqueued.id,
+    metadata: { attestationId: latest.id, processed },
   });
 
-  return NextResponse.json({ ok: true, upload, attestationId: latest.id });
+  return NextResponse.json({ ok: true, enqueuedJobId: enqueued.id, processed, attestationId: latest.id });
 }

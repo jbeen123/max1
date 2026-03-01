@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { OpsActions } from "@/components/OpsActions";
 
 export default async function AdminOpsPage() {
   const auth = await requireRole(["ADMIN"]);
@@ -22,6 +23,8 @@ export default async function AdminOpsPage() {
         </ul>
         <p>Last prune: {latestPrune ? latestPrune.createdAt.toISOString() : "never"}</p>
       </div>
+
+      <OpsActions />
 
       <div className="card" style={{ overflowX: "auto" }}>
         <h3>Recent Audit Attestations</h3>
