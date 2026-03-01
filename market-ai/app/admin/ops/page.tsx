@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { OpsActions } from "@/components/OpsActions";
@@ -22,6 +23,7 @@ export default async function AdminOpsPage() {
           <li>POST /api/admin/ops/attest-audit/upload</li>
         </ul>
         <p>Last prune: {latestPrune ? latestPrune.createdAt.toISOString() : "never"}</p>
+        <p><Link href="/admin/ops/queue">Open Queue Console</Link></p>
       </div>
 
       <OpsActions />
