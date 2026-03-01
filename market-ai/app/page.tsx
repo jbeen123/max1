@@ -1,25 +1,40 @@
 import Link from "next/link";
 
+const stats = [
+  ["Avg. moderation time", "< 4 hours"],
+  ["Documented audit trail", "100%"],
+  ["State-aware compliance rules", "Built-in"],
+];
+
 export default function HomePage() {
   return (
     <section className="grid" style={{ gap: "1.25rem" }}>
-      <div className="card">
-        <p style={{ margin: 0, color: "#a5b4fc", fontWeight: 600 }}>Compliance-first real estate marketplace</p>
-        <h1 style={{ marginBottom: ".5rem" }}>market.ai</h1>
-        <p style={{ color: "#cbd5e1" }}>
-          Connect buyers and sellers of land + real estate with clear disclosures, verified users, and state-aware deal workflows.
+      <div className="hero card">
+        <p className="eyebrow">Compliance-first real estate marketplace</p>
+        <h1>market.ai</h1>
+        <p className="lead">
+          Connect land sellers and buyers with verified identities, compliant listing workflows, and contract-ready deal rooms.
         </p>
-        <div style={{ display: "flex", gap: ".75rem", marginTop: "1rem" }}>
-          <Link href="/submit"><button>List Property</button></Link>
-          <Link href="/search"><button style={{ background: "transparent", borderColor: "#64748b" }}>Find Deals</button></Link>
+        <div style={{ display: "flex", gap: ".75rem", marginTop: "1rem", flexWrap: "wrap" }}>
+          <Link href="/login"><button>Get Started</button></Link>
+          <Link href="/search"><button className="ghost">Browse Live Deals</button></Link>
         </div>
       </div>
 
+      <div className="grid grid-3">
+        {stats.map(([label, value]) => (
+          <div className="card" key={label}>
+            <p style={{ color: "#94a3b8", margin: 0 }}>{label}</p>
+            <h3 style={{ margin: ".4rem 0 0" }}>{value}</h3>
+          </div>
+        ))}
+      </div>
+
       <div className="grid grid-2">
-        <div className="card"><h3>Seller flow</h3><p>Create listing, upload docs, complete disclosures, receive offers.</p></div>
-        <div className="card"><h3>Buyer flow</h3><p>Filter by state/county/zoning, submit offers, move into deal room.</p></div>
-        <div className="card"><h3>Compliance</h3><p>Jurisdiction checks and assignment guardrails before listing goes live.</p></div>
-        <div className="card"><h3>Operations</h3><p>Admin dashboard, moderation queue, and audit logs for every action.</p></div>
+        <div className="card"><h3>Seller flow</h3><p>Create listing, upload docs, complete disclosures, then submit for moderation.</p></div>
+        <div className="card"><h3>Buyer flow</h3><p>Filter deals by location and economics, submit offers, negotiate inside deal room.</p></div>
+        <div className="card"><h3>Moderation</h3><p>Admin queue approves/rejects pending listings with notes for full traceability.</p></div>
+        <div className="card"><h3>Offer negotiation</h3><p>Buyers submit offers, sellers counter, and both sides see offer history clearly.</p></div>
       </div>
     </section>
   );

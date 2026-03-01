@@ -17,9 +17,18 @@ enum ListingStatus {
   DRAFT
   PENDING_REVIEW
   ACTIVE
+  REJECTED
   UNDER_CONTRACT
   ASSIGNED
   CLOSED
+}
+
+enum OfferStatus {
+  SUBMITTED
+  COUNTERED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
 }
 
 model User {
@@ -49,6 +58,7 @@ model Property {
   askingPrice        Int
   assignmentAllowed  Boolean       @default(false)
   disclosures        Json?
+  moderationNotes    String?
   status             ListingStatus @default(DRAFT)
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
@@ -58,13 +68,17 @@ model Property {
 }
 
 model Offer {
-  id             String    @id @default(cuid())
+  id             String      @id @default(cuid())
   propertyId     String
   buyerId        String
   amount         Int
   message        String?
-  createdAt      DateTime  @default(now())
+  status         OfferStatus @default(SUBMITTED)
+  counterAmount  Int?
+  counterMessage String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  property       Property  @relation(fields: [propertyId], references: [id])
-  buyer          User      @relation("BuyerOffers", fields: [buyerId], references: [id])
+  property       Property    @relation(fields: [propertyId], references: [id])
+  buyer          User        @relation("BuyerOffers", fields: [buyerId], references: [id])
 }

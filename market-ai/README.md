@@ -12,9 +12,10 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
    ```bash
    npm install
    ```
-3. Generate Prisma client:
+3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
+   npx prisma migrate dev --name init_market_ai
    ```
 4. Run app:
    ```bash
@@ -24,16 +25,28 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 ## Included MVP routes
 
 - `/` — landing page
-- `/submit` — seller property submission
-- `/search` — buyer listing search
-- `/deal-room` — deal collaboration room
+- `/login` — role-based MVP login (buyer/seller/admin)
+- `/submit` — seller property submission (requires seller/admin)
+- `/search` — buyer listing search (active listings)
+- `/deal-room` — offer submission + counteroffer
 - `/compliance` — compliance checklist
-- `/dashboard` — basic ops dashboard
+- `/dashboard` — metrics + moderation queue
+
+## API
+
+- `POST /api/auth/login` — create/login user and set auth cookie
+- `GET /api/auth/me` — current user
+- `GET /api/properties` — active listings
+- `POST /api/properties` — create listing (pending moderation)
+- `GET /api/moderation` — admin moderation queue
+- `POST /api/moderation` — approve/reject listing
+- `GET /api/offers` — offer timeline (permission filtered)
+- `POST /api/offers` — buyer offer submit
+- `PATCH /api/offers` — seller/admin counter offer
 - `/api/health` — health endpoint
-- `/api/properties` — create/list properties
-- `/api/matches` — simple buyer-seller matcher
 
 ## Notes
 
 - This is a starter scaffold, not legal advice.
 - Expand compliance rules per state with legal counsel before launch.
+- Replace MVP auth with a production auth provider (Clerk/Auth.js) before release.
