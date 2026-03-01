@@ -15,7 +15,7 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name init_market_ai
+   npx prisma migrate dev --name phase3_hardening
    ```
 4. Run app:
    ```bash
@@ -26,17 +26,21 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 
 - `/` — branded landing page
 - `/login` — role-based MVP login (buyer/seller/admin)
-- `/submit` — seller property submission (requires seller/admin)
+- `/submit` — seller property submission (protected)
 - `/search` — buyer listing search (active listings)
-- `/deal-room` — offer submission + counteroffer
+- `/deal-room` — offer submission + counteroffer (protected)
 - `/compliance` — compliance checklist
-- `/dashboard` — metrics + moderation UI + KYC + integrations
+- `/dashboard` — metrics + moderation UI + KYC + integrations (protected)
 
 ## API
 
-### Core
+### Auth
 - `POST /api/auth/login` — create/login user and set auth cookie
 - `GET /api/auth/me` — current user
+- `GET /api/auth/session` — auth state helper
+- `POST /api/auth/logout` — clear auth cookie
+
+### Core marketplace
 - `GET /api/properties` — active listings
 - `POST /api/properties` — create listing (pending moderation)
 - `GET /api/moderation` — admin moderation queue
@@ -46,19 +50,36 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 - `PATCH /api/offers` — seller/admin counter offer
 - `GET /api/health` — health endpoint
 
-### Phase 2 hooks
-- `POST /api/kyc/session` — create KYC session (provider hook)
-- `POST /api/kyc/webhook` — receive KYC events
-- `POST /api/esign/envelope` — create e-sign envelope (DocuSign/Dropbox Sign hook)
-- `POST /api/payments/intent` — create Stripe PaymentIntent for earnest money
-- `POST /api/payments/webhook` — receive Stripe events
+### Phase 2 + 3 integrations
+- `POST /api/kyc/session` — create KYC session and persist it
+- `POST /api/kyc/webhook` — verify signature + update KYC/user verification
+- `POST /api/esign/envelope` — create + persist e-sign envelope
+- `POST /api/payments/intent` — create + persist Stripe PaymentIntent
+- `POST /api/payments/webhook` — verify Stripe signature + update transaction status
+
+## Middleware protection
+
+`middleware.ts` guards:
+- `/submit`
+- `/dashboard`
+- `/deal-room`
+
+and redirects unauthenticated users to `/login`.
+
+## New phase 3 data models
+
+- `KycSession`
+- `ESignEnvelope`
+- `DealTransaction`
+
+with status enums for verification, signature lifecycle, and payment lifecycle.
 
 ## Integration notes
 
-- KYC, e-sign, and webhook handlers are scaffolded with safe placeholders.
-- Add provider SDK wiring + signature verification before production.
-- If `STRIPE_SECRET_KEY` is missing, payments endpoint returns mock mode for local testing.
-- Replace MVP auth with Clerk/Auth.js before launch.
+- KYC webhooks use HMAC SHA256 via `KYC_WEBHOOK_SECRET` and `x-kyc-signature`.
+- Stripe webhooks require `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`.
+- E-sign provider calls are still scaffolded; map templates/recipients per contract type before production.
+- MVP cookie auth is in place; production rollout should migrate to Clerk/Auth.js with RBAC middleware.
 
 ## Legal notes
 

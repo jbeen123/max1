@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { z } from "zod";
+import { db } from "@/lib/db";
 
 const schema = z.object({
   propertyId: z.string().min(1),
@@ -14,8 +15,21 @@ export async function POST(req: Request) {
 
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) {
+      const intentId = `pi_mock_${crypto.randomUUID().slice(0, 12)}`;
+      await db.dealTransaction.create({
+        data: {
+          propertyId: input.propertyId,
+          stripeIntentId: intentId,
+          amount: input.amount,
+          currency: input.currency.toLowerCase(),
+          status: "REQUIRES_PAYMENT_METHOD",
+          clientSecret: "mock_client_secret",
+          rawPayload: { mode: "mock" },
+        },
+      });
+
       return NextResponse.json({
-        intentId: `pi_mock_${crypto.randomUUID().slice(0, 12)}`,
+        intentId,
         clientSecret: "mock_client_secret",
         mode: "mock",
         note: "Set STRIPE_SECRET_KEY for live PaymentIntent creation.",
@@ -30,6 +44,25 @@ export async function POST(req: Request) {
       metadata: {
         propertyId: input.propertyId,
         flow: "earnest_money",
+      },
+    });
+
+    await db.dealTransaction.upsert({
+      where: { stripeIntentId: intent.id },
+      update: {
+        amount: input.amount,
+        currency: input.currency.toLowerCase(),
+        clientSecret: intent.client_secret,
+        rawPayload: intent,
+      },
+      create: {
+        propertyId: input.propertyId,
+        stripeIntentId: intent.id,
+        amount: input.amount,
+        currency: input.currency.toLowerCase(),
+        status: "REQUIRES_PAYMENT_METHOD",
+        clientSecret: intent.client_secret,
+        rawPayload: intent,
       },
     });
 

@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { db } from "@/lib/db";
 
 const schema = z.object({
   userId: z.string().min(1),
   provider: z.enum(["persona", "stripe_identity", "sumsub"]),
 });
+
+const mapProvider = {
+  persona: "PERSONA",
+  stripe_identity: "STRIPE_IDENTITY",
+  sumsub: "SUMSUB",
+} as const;
 
 export async function POST(req: Request) {
   try {
@@ -13,10 +20,20 @@ export async function POST(req: Request) {
     // Integration hook: call provider SDK/API here.
     const sessionId = `${input.provider}_sess_${crypto.randomUUID().slice(0, 12)}`;
 
+    const saved = await db.kycSession.create({
+      data: {
+        userId: input.userId,
+        provider: mapProvider[input.provider],
+        externalId: sessionId,
+        status: "PENDING_REVIEW",
+        rawPayload: { provider: input.provider, createdBy: "api" },
+      },
+    });
+
     return NextResponse.json({
-      sessionId,
+      sessionId: saved.externalId,
       provider: input.provider,
-      status: "PENDING_REVIEW",
+      status: saved.status,
       note: "Provider call is scaffolded. Add real API credentials + SDK wiring.",
     });
   } catch (error) {
