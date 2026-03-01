@@ -15,12 +15,17 @@ type Job = {
 export default function OpsQueuePage() {
   const [failed, setFailed] = useState<Job[]>([]);
   const [pending, setPending] = useState<Job[]>([]);
+  const [metrics, setMetrics] = useState<any>(null);
   const [msg, setMsg] = useState("");
 
   async function load() {
-    const list = await fetch("/api/admin/ops/queue/replay", { method: "GET" }).then((r) => r.json()).catch(() => ({}));
+    const [list, m] = await Promise.all([
+      fetch("/api/admin/ops/queue/replay", { method: "GET" }).then((r) => r.json()).catch(() => ({})),
+      fetch("/api/admin/ops/queue/metrics", { method: "GET" }).then((r) => r.json()).catch(() => null),
+    ]);
     setFailed(Array.isArray(list?.failed) ? list.failed : []);
     setPending(Array.isArray(list?.pending) ? list.pending : []);
+    setMetrics(m);
   }
 
   useEffect(() => {
@@ -65,6 +70,20 @@ export default function OpsQueuePage() {
           <button className="ghost" onClick={replayAllFailed}>Replay All Failed</button>
         </div>
         {msg && <p>{msg}</p>}
+      </div>
+
+      <div className="card">
+        <h3>Queue Metrics (24h)</h3>
+        {!metrics ? <p>Loading metrics...</p> : (
+          <ul>
+            <li>Pending: {metrics.pending}</li>
+            <li>Processing: {metrics.processing}</li>
+            <li>Failed: {metrics.failed}</li>
+            <li>Succeeded (24h): {metrics.succeeded24h}</li>
+            <li>Failed (24h): {metrics.failed24h}</li>
+            <li>Circuit: {metrics?.circuit?.isOpen ? `OPEN until ${metrics?.circuit?.openUntil}` : "CLOSED"}</li>
+          </ul>
+        )}
       </div>
 
       <div className="card">

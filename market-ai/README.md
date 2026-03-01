@@ -15,53 +15,48 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase14_worker_dlq_console
+   npx prisma migrate dev --name phase15_queue_circuit_metrics
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 14 added
+## What phase 15 added
 
-- **Dedicated queue worker endpoint**
-  - `POST /api/admin/ops/queue/process?limit=50`
-  - Processes upload queue independently from maintenance run
-- **Dead-letter queue console**
-  - New page: `/admin/ops/queue`
-  - Shows failed + pending jobs
-  - Supports replay single job and replay all failed jobs
-- **Replay API controls**
-  - `GET /api/admin/ops/queue/replay` (list failed/pending)
-  - `POST /api/admin/ops/queue/replay` (replay one/all)
-- **Ops dashboard linkout**
-  - `/admin/ops` now links directly to queue console
-- **Worker script**
-  - `scripts/worker-phase14.sh`
-  - Calls queue process endpoint with edge secret
+- **DLQ retry reason categorization**
+  - Upload job failures now include `errorCategory`
+  - Categories include: `timeout`, `network`, `auth`, `rate_limit`, `remote_5xx`, `unknown`
+- **Automatic circuit breaker for upload queue**
+  - New `QueueCircuitState` model
+  - Queue opens circuit after repeated failures and cools down for 5 minutes
+  - Processing is skipped while circuit is open
+- **Queue metrics endpoint + widgets**
+  - `GET /api/admin/ops/queue/metrics`
+  - Queue page now shows pending/processing/failed + 24h success/failure + circuit state
 
 ## API highlights
 
 - `POST /api/admin/ops/queue/process?limit=50`
 - `GET /api/admin/ops/queue/replay`
 - `POST /api/admin/ops/queue/replay`
+- `GET /api/admin/ops/queue/metrics`
 - `POST /api/admin/ops/run-maintenance`
-- `POST /api/admin/ops/attest-audit`
-- `POST /api/admin/ops/attest-audit/upload`
 
-## Automation examples
+## Data model additions (phase 15)
 
-Queue worker every 5 minutes:
+- `QueueCircuitState`
+- `UploadJob.errorCategory`
 
-```bash
-*/5 * * * * cd /home/jahffy/.openclaw/workspace/market-ai && EDGE_SHARED_SECRET='your-secret' BASE_URL='http://localhost:3000' ./scripts/worker-phase14.sh >> /tmp/marketai-worker.log 2>&1
-```
+## Ops UI
+
+- `/admin/ops/queue` now includes metrics widget and circuit status.
 
 ## Next production tasks
 
-- Move queue execution into dedicated worker service/process manager.
-- Add DLQ retry reason categorization + automatic circuit breaker.
-- Add queue metrics widgets (success/fail latency) in ops dashboard.
+- Add configurable circuit thresholds (env-driven).
+- Add circuit open/close history timeline in ops UI.
+- Add Prometheus/OpenTelemetry export for queue metrics.
 
 ## Legal notes
 
