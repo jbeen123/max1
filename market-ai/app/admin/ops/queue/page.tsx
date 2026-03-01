@@ -17,18 +17,21 @@ export default function OpsQueuePage() {
   const [pending, setPending] = useState<Job[]>([]);
   const [metrics, setMetrics] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [policyHistory, setPolicyHistory] = useState<any[]>([]);
   const [msg, setMsg] = useState("");
 
   async function load() {
-    const [list, m, h] = await Promise.all([
+    const [list, m, h, ph] = await Promise.all([
       fetch("/api/admin/ops/queue/replay", { method: "GET" }).then((r) => r.json()).catch(() => ({})),
       fetch("/api/admin/ops/queue/metrics", { method: "GET" }).then((r) => r.json()).catch(() => null),
       fetch("/api/admin/ops/queue/history", { method: "GET" }).then((r) => r.json()).catch(() => ({})),
+      fetch("/api/admin/ops/queue/policy-history?queueKey=ATTESTATION_UPLOAD", { method: "GET" }).then((r) => r.json()).catch(() => ({})),
     ]);
     setFailed(Array.isArray(list?.failed) ? list.failed : []);
     setPending(Array.isArray(list?.pending) ? list.pending : []);
     setMetrics(m);
     setHistory(Array.isArray(h?.items) ? h.items : []);
+    setPolicyHistory(Array.isArray(ph?.items) ? ph.items : []);
   }
 
   useEffect(() => {
@@ -83,6 +86,17 @@ export default function OpsQueuePage() {
     await load();
   }
 
+  async function sendTestAlert() {
+    const webhookUrl = String(metrics?.policy?.alertWebhook || "");
+    const res = await fetch("/api/admin/ops/queue/alerts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ queueKey: "ATTESTATION_UPLOAD", message: "Manual test alert", webhookUrl: webhookUrl || undefined }),
+    });
+    const data = await res.json();
+    setMsg(res.ok ? `Alert sent: ${data?.sent?.sent ? "yes" : "no"}` : data?.error || "Alert failed");
+  }
+
   return (
     <section className="grid" style={{ gap: "1rem" }}>
       <div className="card">
@@ -120,7 +134,19 @@ export default function OpsQueuePage() {
             <input name="enabled" type="checkbox" defaultChecked={metrics?.policy?.enabled ?? true} style={{ width: "auto" }} /> Enabled
           </label>
           <button type="submit">Save Policy</button>
+          <button type="button" className="ghost" onClick={sendTestAlert}>Send Test Alert</button>
         </form>
+      </div>
+
+      <div className="card">
+        <h3>Policy Change History</h3>
+        {policyHistory.length === 0 ? <p>No policy changes yet.</p> : (
+          <ul>
+            {policyHistory.map((e) => (
+              <li key={e.id}>{new Date(e.createdAt).toLocaleString()} · {e.action}</li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="card">

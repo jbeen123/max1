@@ -15,52 +15,63 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase17_runtime_policy_alerts_latency
+   npx prisma migrate dev --name phase18_policy_audit_alert_ops
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 17 added
+## What phase 18 added
 
-- **Runtime DB-configurable queue policy**
-  - New model: `QueuePolicy`
-  - New API: `GET/PATCH /api/admin/ops/queue/config`
-  - Supports live updates to fail threshold, open duration, alert webhook, enabled flag
-- **Alert hooks on circuit-open**
-  - New alert helper: `lib/alerts/queue-alert.ts`
-  - Queue processor sends alert when breaker opens
-  - Optional manual test endpoint: `POST /api/admin/ops/queue/alerts`
-- **Latency percentile metrics**
-  - Queue metrics now include p50/p95/p99 latency in ms over last 24h succeeded jobs
-- **Queue policy controls in UI**
-  - `/admin/ops/queue` now includes policy editor form
+- **Per-queue runtime policy framework (DB-first)**
+  - Queue processor now sources policy from `QueuePolicy` table
+  - Env vars are bootstrap defaults only
+- **Policy change traceability API**
+  - `GET /api/admin/ops/queue/policy-history?queueKey=ATTESTATION_UPLOAD`
+  - Reads `QUEUE_POLICY_UPDATED` entries from audit log
+- **Alert testing endpoint + UI hook**
+  - `POST /api/admin/ops/queue/alerts`
+  - Queue console now has "Send Test Alert"
+- **Latency + policy observability improvements**
+  - Queue metrics include policy and latency percentiles
+  - Prometheus export includes queue latency gauges
+- **Circuit event persistence**
+  - New model: `QueueCircuitEvent` used for open/close timeline
 
 ## API highlights
 
-- `GET /api/admin/ops/queue/config?queueKey=ATTESTATION_UPLOAD`
-- `PATCH /api/admin/ops/queue/config`
+- `GET/PATCH /api/admin/ops/queue/config`
+- `GET /api/admin/ops/queue/policy-history`
 - `POST /api/admin/ops/queue/alerts`
 - `GET /api/admin/ops/queue/metrics`
 - `GET /api/admin/ops/queue/metrics/prometheus`
 - `GET /api/admin/ops/queue/history`
 
-## Data model additions (phase 17)
+## Data model additions (phase 18)
 
 - `QueuePolicy`
+- `QueueCircuitEvent`
 
-## Env vars (phase 17)
+## Ops UI
 
-- `QUEUE_ALERT_WEBHOOK_URL`
+- `/admin/ops/queue` now includes:
+  - runtime policy editor
+  - policy change history
+  - test alert trigger
+  - circuit timeline
+  - latency/circuit metrics
 
-(Existing: `QUEUE_CIRCUIT_FAIL_THRESHOLD`, `QUEUE_CIRCUIT_OPEN_MS` for bootstrap defaults)
+## Env vars
+
+- `QUEUE_ALERT_WEBHOOK_URL` (default alert target)
+- `QUEUE_CIRCUIT_FAIL_THRESHOLD` and `QUEUE_CIRCUIT_OPEN_MS` now act as bootstrap defaults if no policy exists yet
 
 ## Next production tasks
 
-- Add per-environment policy promotion workflow and change approvals.
-- Add queue alert dedup/suppression window.
-- Add histogram buckets for latency in Prometheus export.
+- Add role-approval workflow for policy edits in production.
+- Add webhook secret signing for alert callbacks.
+- Add metric labels for error categories in Prometheus endpoint.
 
 ## Legal notes
 

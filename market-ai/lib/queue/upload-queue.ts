@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { uploadAttestationOffbox } from "@/lib/storage/attestation-upload";
 import { sendQueueAlert } from "@/lib/alerts/queue-alert";
+import { getQueuePolicy } from "@/lib/queue/policy";
 
 function categorizeError(error: unknown) {
   const msg = String(error || "").toLowerCase();
@@ -20,20 +21,6 @@ async function getCircuit(queueKey: string) {
   return state;
 }
 
-async function getPolicy(queueKey: string) {
-  const policy = await db.queuePolicy.findUnique({ where: { queueKey } });
-  if (policy) return policy;
-
-  return db.queuePolicy.create({
-    data: {
-      queueKey,
-      failThreshold: Number(process.env.QUEUE_CIRCUIT_FAIL_THRESHOLD || "5"),
-      openMs: Number(process.env.QUEUE_CIRCUIT_OPEN_MS || String(5 * 60 * 1000)),
-      alertWebhook: process.env.QUEUE_ALERT_WEBHOOK_URL || null,
-      enabled: true,
-    },
-  });
-}
 
 export async function enqueueAttestationUpload(attestationId: string, payload: unknown) {
   return db.uploadJob.create({
@@ -48,7 +35,7 @@ export async function enqueueAttestationUpload(attestationId: string, payload: u
 
 export async function processUploadQueue(limit = 10) {
   const queueKey = "ATTESTATION_UPLOAD";
-  const [circuit, policy] = await Promise.all([getCircuit(queueKey), getPolicy(queueKey)]);
+  const [circuit, policy] = await Promise.all([getCircuit(queueKey), getQueuePolicy(queueKey)]);
 
   if (!policy.enabled) return [{ id: "policy", status: "SKIPPED", error: "Queue disabled by policy" }];
 
