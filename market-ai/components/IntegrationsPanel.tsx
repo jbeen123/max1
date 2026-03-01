@@ -5,6 +5,8 @@ import { useState } from "react";
 export function IntegrationsPanel() {
   const [esignMsg, setEsignMsg] = useState("");
   const [payMsg, setPayMsg] = useState("");
+  const [connectMsg, setConnectMsg] = useState("");
+  const [payoutMsg, setPayoutMsg] = useState("");
 
   async function createEnvelope(formData: FormData) {
     const payload = Object.fromEntries(formData.entries());
@@ -26,6 +28,28 @@ export function IntegrationsPanel() {
     });
     const data = await res.json();
     setPayMsg(res.ok ? `Payment intent: ${data.intentId}` : data?.error || "Failed to create payment intent");
+  }
+
+  async function createConnectAccount(formData: FormData) {
+    const payload = Object.fromEntries(formData.entries());
+    const res = await fetch("/api/payments/connect-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    setConnectMsg(res.ok ? `Connected account: ${data.accountId}` : data?.error || "Failed to create connect account");
+  }
+
+  async function createPayout(formData: FormData) {
+    const payload = Object.fromEntries(formData.entries());
+    const res = await fetch("/api/payments/payout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    setPayoutMsg(res.ok ? `Payout created: ${data.stripePayoutId}` : data?.error || "Failed to create payout");
   }
 
   return (
@@ -54,6 +78,28 @@ export function IntegrationsPanel() {
           <button type="submit">Create Payment Intent</button>
         </form>
         {payMsg && <p>{payMsg}</p>}
+      </div>
+
+      <div className="card">
+        <h3>Stripe Connect (Seller Onboarding)</h3>
+        <form action={createConnectAccount} className="grid">
+          <input name="userId" placeholder="Seller user ID" required />
+          <input name="email" type="email" placeholder="Seller email (optional)" />
+          <button type="submit">Create/Update Connect Account</button>
+        </form>
+        {connectMsg && <p>{connectMsg}</p>}
+      </div>
+
+      <div className="card">
+        <h3>Seller Payout</h3>
+        <form action={createPayout} className="grid">
+          <input name="propertyId" placeholder="Property ID" required />
+          <input name="userId" placeholder="Seller user ID" required />
+          <input name="amount" type="number" placeholder="Amount (USD cents)" required />
+          <input name="currency" placeholder="Currency" defaultValue="usd" required />
+          <button type="submit">Send Payout</button>
+        </form>
+        {payoutMsg && <p>{payoutMsg}</p>}
       </div>
     </div>
   );

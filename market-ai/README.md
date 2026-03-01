@@ -15,7 +15,7 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase3_hardening
+   npx prisma migrate dev --name phase4_integrations
    ```
 4. Run app:
    ```bash
@@ -50,12 +50,21 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 - `PATCH /api/offers` — seller/admin counter offer
 - `GET /api/health` — health endpoint
 
-### Phase 2 + 3 integrations
+### KYC
 - `POST /api/kyc/session` — create KYC session and persist it
 - `POST /api/kyc/webhook` — verify signature + update KYC/user verification
+- `GET /api/admin/kyc` — admin queue of pending KYC sessions
+- `POST /api/admin/kyc` — admin verify/reject KYC session
+
+### E-sign
 - `POST /api/esign/envelope` — create + persist e-sign envelope
+- `POST /api/esign/webhook` — verify signature + update envelope state
+
+### Payments / Payouts
 - `POST /api/payments/intent` — create + persist Stripe PaymentIntent
 - `POST /api/payments/webhook` — verify Stripe signature + update transaction status
+- `POST /api/payments/connect-account` — create/update Stripe Connect seller account
+- `POST /api/payments/payout` — send seller payout (transfer) + persist record
 
 ## Middleware protection
 
@@ -66,20 +75,27 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 
 and redirects unauthenticated users to `/login`.
 
-## New phase 3 data models
+## New phase 4 data models
 
-- `KycSession`
-- `ESignEnvelope`
-- `DealTransaction`
+- `PayoutAccount` — Stripe Connect account linkage
+- `Payout` — disbursement ledger
 
-with status enums for verification, signature lifecycle, and payment lifecycle.
+(Phase 3 models remain: `KycSession`, `ESignEnvelope`, `DealTransaction`.)
 
 ## Integration notes
 
+- E-sign + KYC provider calls are implemented through adapter modules in `lib/integrations/*` with stubs that switch to provider mode when credentials are present.
 - KYC webhooks use HMAC SHA256 via `KYC_WEBHOOK_SECRET` and `x-kyc-signature`.
+- E-sign webhooks use HMAC SHA256 via `ESIGN_WEBHOOK_SECRET` and `x-esign-signature`.
 - Stripe webhooks require `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`.
-- E-sign provider calls are still scaffolded; map templates/recipients per contract type before production.
-- MVP cookie auth is in place; production rollout should migrate to Clerk/Auth.js with RBAC middleware.
+- Payments support local mock mode automatically if Stripe key is absent.
+
+## Production hardening checklist (next)
+
+- Replace stub integration code in `lib/integrations/esign.ts` and `lib/integrations/kyc.ts` with live SDK calls.
+- Add idempotency keys + replay protection tables for all webhooks.
+- Migrate MVP cookie auth to Auth.js or Clerk with signed sessions + RBAC middleware.
+- Add comprehensive audit logs for moderation, KYC overrides, and payouts.
 
 ## Legal notes
 

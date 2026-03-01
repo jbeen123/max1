@@ -63,6 +63,14 @@ enum TransactionStatus {
   CANCELED
 }
 
+enum PayoutStatus {
+  PENDING
+  IN_TRANSIT
+  PAID
+  FAILED
+  CANCELED
+}
+
 model User {
   id           String      @id @default(cuid())
   email        String      @unique
@@ -76,6 +84,8 @@ model User {
   properties   Property[]  @relation("SellerProperties")
   offers       Offer[]     @relation("BuyerOffers")
   kycSessions  KycSession[]
+  payoutAccount PayoutAccount?
+  payouts      Payout[]
 }
 
 model Property {
@@ -100,6 +110,7 @@ model Property {
   offers             Offer[]
   envelopes          ESignEnvelope[]
   transactions       DealTransaction[]
+  payouts            Payout[]
 }
 
 model Offer {
@@ -160,4 +171,34 @@ model DealTransaction {
   updatedAt        DateTime          @updatedAt
 
   property         Property          @relation(fields: [propertyId], references: [id])
+}
+
+model PayoutAccount {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  stripeAccountId    String   @unique
+  chargesEnabled     Boolean  @default(false)
+  payoutsEnabled     Boolean  @default(false)
+  detailsSubmitted   Boolean  @default(false)
+  rawPayload         Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user               User     @relation(fields: [userId], references: [id])
+}
+
+model Payout {
+  id                String       @id @default(cuid())
+  propertyId        String
+  userId            String
+  stripePayoutId    String?      @unique
+  amount            Int
+  currency          String       @default("usd")
+  status            PayoutStatus @default(PENDING)
+  rawPayload        Json?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  property          Property     @relation(fields: [propertyId], references: [id])
+  user              User         @relation(fields: [userId], references: [id])
 }
