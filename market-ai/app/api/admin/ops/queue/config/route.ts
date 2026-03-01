@@ -12,6 +12,7 @@ const schema = z.object({
   enabled: z.boolean().optional(),
   submitForApproval: z.boolean().default(true),
   note: z.string().optional(),
+  requiredVotes: z.number().int().min(1).max(5).optional(),
 });
 
 export async function GET(req: Request) {
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
 
   const [config, pendingApproval] = await Promise.all([
     db.queuePolicy.findUnique({ where: { queueKey } }),
-    db.queuePolicyApproval.findFirst({ where: { queueKey, status: "PENDING" }, orderBy: { createdAt: "desc" } }),
+    db.queuePolicyApproval.findFirst({ where: { queueKey, status: "PENDING" }, orderBy: { createdAt: "desc" }, include: { votes: true } }),
   ]);
 
   return NextResponse.json({ queueKey, config, pendingApproval });
@@ -43,6 +44,7 @@ export async function PATCH(req: Request) {
         status: "PENDING",
         requestPayload: input,
         note: input.note,
+        requiredVotes: input.requiredVotes ?? Number(process.env.QUEUE_POLICY_REQUIRED_VOTES || "2"),
       },
     });
 

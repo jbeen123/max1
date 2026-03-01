@@ -15,55 +15,53 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase19_policy_approval_signed_alerts
+   npx prisma migrate dev --name phase20_quorum_approval_webhook_replay
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 19 added
+## What phase 20 added
 
-- **Policy edit approval workflow**
-  - New model: `QueuePolicyApproval`
-  - Policy edits can be submitted for approval instead of immediate apply
-  - Endpoints:
-    - `GET/POST /api/admin/ops/queue/policy-approvals`
-    - `POST /api/admin/ops/queue/policy-approvals/:id/approve`
-    - `POST /api/admin/ops/queue/policy-approvals/:id/reject`
-  - `PATCH /api/admin/ops/queue/config` now submits approval by default
-- **Signed queue alerts**
-  - Alert payloads now support HMAC signature header:
-    - `x-marketai-signature`
-  - Signature secret: `QUEUE_ALERT_SIGNING_SECRET`
-- **Queue policy governance UI**
-  - `/admin/ops/queue` now shows pending approvals with approve/reject actions
-  - Policy saves now submit approval requests
+- **Quorum-based policy approvals (2-of-N style)**
+  - New vote model: `QueuePolicyApprovalVote`
+  - Approvals now gather votes until `requiredVotes` is reached
+  - Policy applies only when quorum is reached
+- **Requester cannot self-approve**
+  - Approval endpoint now blocks requester from voting approval on their own request
+- **Signed alert anti-replay receiver support**
+  - New verifier: `lib/security/webhook-verify.ts`
+  - New nonce registry model: `WebhookNonceUse`
+  - New test receiver endpoint:
+    - `POST /api/admin/ops/queue/alerts/test`
+  - Verifies timestamp window + signature + nonce replay
 
 ## API highlights
 
-- `GET/PATCH /api/admin/ops/queue/config`
+- `PATCH /api/admin/ops/queue/config` (submits approval request)
 - `GET/POST /api/admin/ops/queue/policy-approvals`
 - `POST /api/admin/ops/queue/policy-approvals/:id/approve`
 - `POST /api/admin/ops/queue/policy-approvals/:id/reject`
 - `POST /api/admin/ops/queue/alerts`
+- `POST /api/admin/ops/queue/alerts/test`
 
-## Data model additions (phase 19)
+## Data model additions (phase 20)
 
-- `QueuePolicyApproval`
-- `PolicyApprovalStatus` enum
+- `QueuePolicyApprovalVote`
+- `WebhookNonceUse`
+- `QueuePolicyApproval.requiredVotes`
 
-## Env vars (phase 19)
+## Env vars (phase 20)
 
+- `QUEUE_POLICY_REQUIRED_VOTES`
 - `QUEUE_ALERT_SIGNING_SECRET`
-
-(Existing queue policy/alert vars still apply.)
 
 ## Next production tasks
 
-- Add multi-admin quorum approvals (2-of-N) for policy activation.
-- Add approver identity constraints (requester cannot self-approve).
-- Add signed alert replay timestamp + nonce validation on receiver side.
+- Add strict separation of requester/approver roles by team/group.
+- Add automatic expiration for stale pending approvals.
+- Add rotating webhook signing keys with key-id headers.
 
 ## Legal notes
 

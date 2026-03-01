@@ -339,6 +339,29 @@ model QueuePolicyApproval {
   status         PolicyApprovalStatus @default(PENDING)
   requestPayload Json
   note           String?
+  requiredVotes  Int                  @default(2)
   createdAt      DateTime             @default(now())
   decidedAt      DateTime?
+
+  votes          QueuePolicyApprovalVote[]
+}
+
+model QueuePolicyApprovalVote {
+  id           String   @id @default(cuid())
+  approvalId   String
+  voterId      String
+  createdAt    DateTime @default(now())
+
+  approval     QueuePolicyApproval @relation(fields: [approvalId], references: [id])
+
+  @@unique([approvalId, voterId])
+}
+
+model WebhookNonceUse {
+  id         String   @id @default(cuid())
+  scope      String
+  nonce      String
+  createdAt  DateTime @default(now())
+
+  @@unique([scope, nonce])
 }

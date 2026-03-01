@@ -77,6 +77,7 @@ export default function OpsQueuePage() {
       openMs: Number(formData.get("openMs")),
       enabled: formData.get("enabled") === "on",
       alertWebhook: String(formData.get("alertWebhook") || "") || null,
+      requiredVotes: Number(formData.get("requiredVotes") || 2),
       submitForApproval: true,
     };
 
@@ -152,6 +153,7 @@ export default function OpsQueuePage() {
           <input name="failThreshold" type="number" min={1} max={100} defaultValue={metrics?.policy?.failThreshold ?? 5} />
           <input name="openMs" type="number" min={1000} defaultValue={metrics?.policy?.openMs ?? 300000} />
           <input name="alertWebhook" placeholder="Alert webhook URL" defaultValue={metrics?.policy?.alertWebhook ?? ""} />
+          <input name="requiredVotes" type="number" min={1} max={5} defaultValue={2} />
           <label style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
             <input name="enabled" type="checkbox" defaultChecked={metrics?.policy?.enabled ?? true} style={{ width: "auto" }} /> Enabled
           </label>
@@ -166,7 +168,7 @@ export default function OpsQueuePage() {
           <ul>
             {pendingApprovals.map((e) => (
               <li key={e.id}>
-                {new Date(e.createdAt).toLocaleString()} · {e.queueKey}
+                {new Date(e.createdAt).toLocaleString()} · {e.queueKey} · votes {(e.votes?.length ?? 0)}/{e.requiredVotes}
                 <button className="ghost" style={{ width: "auto", marginLeft: ".5rem" }} onClick={() => approve(e.id)}>Approve</button>
                 <button className="ghost" style={{ width: "auto", marginLeft: ".5rem" }} onClick={() => reject(e.id)}>Reject</button>
               </li>

@@ -11,13 +11,18 @@ const schema = z.object({
   alertWebhook: z.string().url().nullable().optional(),
   enabled: z.boolean().optional(),
   note: z.string().optional(),
+  requiredVotes: z.number().int().min(1).max(5).optional(),
 });
 
 export async function GET() {
   const auth = await requireRole(["ADMIN"]);
   if (!auth.ok) return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
-  const items = await db.queuePolicyApproval.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
+  const items = await db.queuePolicyApproval.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    include: { votes: true },
+  });
   return NextResponse.json({ items });
 }
 
@@ -33,6 +38,7 @@ export async function POST(req: Request) {
       status: "PENDING",
       requestPayload: input,
       note: input.note,
+      requiredVotes: input.requiredVotes ?? Number(process.env.QUEUE_POLICY_REQUIRED_VOTES || "2"),
     },
   });
 
