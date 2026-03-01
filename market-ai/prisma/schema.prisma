@@ -86,6 +86,7 @@ model User {
   kycSessions   KycSession[]
   payoutAccount PayoutAccount?
   payouts       Payout[]
+  invitesSent   InviteToken[] @relation("InvitesSent")
 }
 
 model Property {
@@ -222,4 +223,18 @@ model AuditLog {
   targetId       String
   metadata       Json?
   createdAt      DateTime @default(now())
+}
+
+model InviteToken {
+  id            String   @id @default(cuid())
+  token         String   @unique
+  email         String
+  role          Role
+  createdById   String?
+  consumedById  String?
+  consumedAt    DateTime?
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  createdBy     User?    @relation("InvitesSent", fields: [createdById], references: [id])
 }

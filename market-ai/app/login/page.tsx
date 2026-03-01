@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 
@@ -9,10 +9,25 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  useEffect(() => {
+    const invite = searchParams.get("invite");
+    if (!invite) return;
+
+    const name = searchParams.get("name") || undefined;
+    fetch("/api/auth/invite/consume", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: invite, name }),
+    }).then(async (res) => {
+      const data = await res.json();
+      if (res.ok) setMsg(`Invite accepted for ${data.user.email}. Please log in.`);
+      else setMsg(data?.error || "Invite processing failed");
+    });
+  }, [searchParams]);
+
   async function onSubmit(formData: FormData) {
     const payload = Object.fromEntries(formData.entries());
 
-    // Keep legacy account bootstrap endpoint for first-time users.
     await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -39,10 +54,10 @@ export default function LoginPage() {
   return (
     <section className="card" style={{ maxWidth: 520, margin: "2rem auto" }}>
       <h2>Login / Create Account</h2>
-      <p style={{ color: "#94a3b8" }}>Auth.js credentials flow with legacy bootstrap for first login.</p>
+      <p style={{ color: "#94a3b8" }}>Auth.js credentials flow with invite support.</p>
       <form action={onSubmit} className="grid">
-        <input name="name" placeholder="Name (optional)" />
-        <input name="email" type="email" placeholder="Email" required />
+        <input name="name" placeholder="Name (optional)" defaultValue={searchParams.get("name") ?? ""} />
+        <input name="email" type="email" placeholder="Email" defaultValue={searchParams.get("email") ?? ""} required />
         <select name="role" required defaultValue="SELLER">
           <option value="SELLER">Seller</option>
           <option value="BUYER">Buyer</option>

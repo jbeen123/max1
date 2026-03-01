@@ -47,6 +47,7 @@ export default async function AuditPage({
               <th style={{ textAlign: "left" }}>Action</th>
               <th style={{ textAlign: "left" }}>Target</th>
               <th style={{ textAlign: "left" }}>Actor</th>
+              <th style={{ textAlign: "left" }}>Details</th>
             </tr>
           </thead>
           <tbody>
@@ -56,6 +57,7 @@ export default async function AuditPage({
                 <td>{log.action}</td>
                 <td>{log.targetType}:{log.targetId}</td>
                 <td>{log.actorId ?? "system"}</td>
+                <td><Link href={`/admin/audit/${log.id}`}>open</Link></td>
               </tr>
             ))}
           </tbody>
