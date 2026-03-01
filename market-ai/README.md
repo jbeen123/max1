@@ -15,64 +15,63 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase5_security_audit
+   npx prisma migrate dev --name phase6_auth_rbac_audit_ui
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 5 added
+## What phase 6 added
 
-- Webhook **idempotency + replay protection** via `WebhookEvent` table.
-- Central **audit logging** via `AuditLog` table + `lib/audit.ts`.
-- Webhooks (Stripe, KYC, E-sign) now store processed event keys and skip duplicates.
-- Auth.js migration scaffold:
-  - `lib/authjs.ts`
-  - `app/api/auth/[...nextauth]/route.ts`
-  - `middleware.ts` checks Auth.js token and still supports legacy cookie fallback.
-- Payout/compliance history is now easier to trace end-to-end.
+- **Auth.js login UI flow** on `/login` using credentials sign-in.
+- Session-aware navbar with inline user identity + logout button.
+- **Role-based middleware enforcement**:
+  - `/dashboard`, `/admin/*` => `ADMIN`
+  - `/submit` => `SELLER | ADMIN`
+  - `/deal-room` => `BUYER | SELLER | ADMIN`
+- **Admin audit logs page** at `/admin/audit` with filters.
+- **Audit export endpoint**: `GET /api/admin/audit?format=csv`.
 
 ## API highlights
 
 ### Auth
-- `POST /api/auth/login` — legacy MVP login + cookie
+- `POST /api/auth/login` — legacy bootstrap for first-time users
 - `GET /api/auth/session` — auth state helper
-- `POST /api/auth/logout` — clear auth cookie
-- `GET/POST /api/auth/[...nextauth]` — Auth.js route handlers
+- `POST /api/auth/logout` — clear legacy auth cookie
+- `GET/POST /api/auth/[...nextauth]` — Auth.js handlers
+
+### Admin
+- `GET /api/admin/audit` — filterable audit entries (JSON)
+- `GET /api/admin/audit?format=csv` — CSV export
+- `GET/POST /api/admin/kyc` — pending KYC queue + admin override
 
 ### Webhooks with replay guard
 - `POST /api/payments/webhook`
 - `POST /api/kyc/webhook`
 - `POST /api/esign/webhook`
 
-### Ops + compliance
-- `GET/POST /api/admin/kyc`
-- `GET/POST /api/moderation`
-- `POST /api/payments/connect-account`
-- `POST /api/payments/payout`
-
 ## Data models
 
 Core: `User`, `Property`, `Offer`, `KycSession`, `ESignEnvelope`, `DealTransaction`, `PayoutAccount`, `Payout`
 
-Phase 5:
+Security/compliance:
 - `WebhookEvent` (idempotency)
 - `AuditLog` (auditable actions)
 
 ## Env vars (important)
 
-- `AUTH_SECRET`, `AUTH_URL` (Auth.js)
-- `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (compat)
+- `AUTH_SECRET`, `AUTH_URL`
+- `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 - `KYC_WEBHOOK_SECRET`, `ESIGN_WEBHOOK_SECRET`
 
 ## Next production tasks
 
-- Finish live SDK calls in `lib/integrations/esign.ts` and `lib/integrations/kyc.ts`.
-- Move UI login fully to Auth.js credential sign-in.
-- Add RBAC checks to middleware by role claims.
-- Add filtered audit log dashboard for admin ops.
+- Complete live SDK calls in integration adapters (`lib/integrations/*`).
+- Remove legacy cookie auth endpoint after full Auth.js migration.
+- Add signed invite/onboarding flow for admin and seller provisioning.
+- Build audit-log drill-down UI for metadata inspection and trace links.
 
 ## Legal notes
 
