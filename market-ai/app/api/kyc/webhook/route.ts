@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyHmacSha256 } from "@/lib/webhooks";
+import { ensureWebhookNotProcessed } from "@/lib/webhook-idempotency";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(req: Request) {
   const payload = await req.text();
@@ -12,6 +14,7 @@ export async function POST(req: Request) {
   }
 
   const event = JSON.parse(payload) as {
+    eventId?: string;
     sessionId?: string;
     status?: "PENDING_REVIEW" | "VERIFIED" | "REJECTED";
     userId?: string;
@@ -21,18 +24,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Malformed event" }, { status: 400 });
   }
 
+  const eventKey = event.eventId ?? `${event.sessionId}:${event.status}`;
+  const idemp = await ensureWebhookNotProcessed("kyc", eventKey, "kyc.status", event);
+  if (idemp.duplicate) return NextResponse.json({ received: true, duplicate: true });
+
   const updated = await db.kycSession.update({
     where: { externalId: event.sessionId },
-    data: {
-      status: event.status,
-      rawPayload: event,
-    },
+    data: { status: event.status, rawPayload: event },
     include: { user: true },
   });
 
   if (event.status === "VERIFIED") {
     await db.user.update({ where: { id: updated.userId }, data: { isVerified: true } });
   }
+
+  await logAudit({
+    actorId: null,
+    action: `KYC_${event.status}`,
+    targetType: "KycSession",
+    targetId: updated.externalId,
+    metadata: { userId: updated.userId },
+  });
 
   return NextResponse.json({ received: true, sessionId: updated.externalId, status: updated.status });
 }

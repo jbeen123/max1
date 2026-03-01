@@ -72,20 +72,20 @@ enum PayoutStatus {
 }
 
 model User {
-  id           String      @id @default(cuid())
-  email        String      @unique
-  name         String?
-  role         Role
-  state        String?
-  isVerified   Boolean     @default(false)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id            String      @id @default(cuid())
+  email         String      @unique
+  name          String?
+  role          Role
+  state         String?
+  isVerified    Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  properties   Property[]  @relation("SellerProperties")
-  offers       Offer[]     @relation("BuyerOffers")
-  kycSessions  KycSession[]
+  properties    Property[]  @relation("SellerProperties")
+  offers        Offer[]     @relation("BuyerOffers")
+  kycSessions   KycSession[]
   payoutAccount PayoutAccount?
-  payouts      Payout[]
+  payouts       Payout[]
 }
 
 model Property {
@@ -201,4 +201,25 @@ model Payout {
 
   property          Property     @relation(fields: [propertyId], references: [id])
   user              User         @relation(fields: [userId], references: [id])
+}
+
+model WebhookEvent {
+  id             String   @id @default(cuid())
+  source         String
+  eventKey       String
+  eventType      String?
+  payload        Json?
+  processedAt    DateTime @default(now())
+
+  @@unique([source, eventKey])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  actorId        String?
+  action         String
+  targetType     String
+  targetId       String
+  metadata       Json?
+  createdAt      DateTime @default(now())
 }

@@ -15,87 +15,64 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase4_integrations
+   npx prisma migrate dev --name phase5_security_audit
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## Included routes
+## What phase 5 added
 
-- `/` — branded landing page
-- `/login` — role-based MVP login (buyer/seller/admin)
-- `/submit` — seller property submission (protected)
-- `/search` — buyer listing search (active listings)
-- `/deal-room` — offer submission + counteroffer (protected)
-- `/compliance` — compliance checklist
-- `/dashboard` — metrics + moderation UI + KYC + integrations (protected)
+- Webhook **idempotency + replay protection** via `WebhookEvent` table.
+- Central **audit logging** via `AuditLog` table + `lib/audit.ts`.
+- Webhooks (Stripe, KYC, E-sign) now store processed event keys and skip duplicates.
+- Auth.js migration scaffold:
+  - `lib/authjs.ts`
+  - `app/api/auth/[...nextauth]/route.ts`
+  - `middleware.ts` checks Auth.js token and still supports legacy cookie fallback.
+- Payout/compliance history is now easier to trace end-to-end.
 
-## API
+## API highlights
 
 ### Auth
-- `POST /api/auth/login` — create/login user and set auth cookie
-- `GET /api/auth/me` — current user
+- `POST /api/auth/login` — legacy MVP login + cookie
 - `GET /api/auth/session` — auth state helper
 - `POST /api/auth/logout` — clear auth cookie
+- `GET/POST /api/auth/[...nextauth]` — Auth.js route handlers
 
-### Core marketplace
-- `GET /api/properties` — active listings
-- `POST /api/properties` — create listing (pending moderation)
-- `GET /api/moderation` — admin moderation queue
-- `POST /api/moderation` — approve/reject listing
-- `GET /api/offers` — offer timeline (permission filtered)
-- `POST /api/offers` — buyer offer submit
-- `PATCH /api/offers` — seller/admin counter offer
-- `GET /api/health` — health endpoint
+### Webhooks with replay guard
+- `POST /api/payments/webhook`
+- `POST /api/kyc/webhook`
+- `POST /api/esign/webhook`
 
-### KYC
-- `POST /api/kyc/session` — create KYC session and persist it
-- `POST /api/kyc/webhook` — verify signature + update KYC/user verification
-- `GET /api/admin/kyc` — admin queue of pending KYC sessions
-- `POST /api/admin/kyc` — admin verify/reject KYC session
+### Ops + compliance
+- `GET/POST /api/admin/kyc`
+- `GET/POST /api/moderation`
+- `POST /api/payments/connect-account`
+- `POST /api/payments/payout`
 
-### E-sign
-- `POST /api/esign/envelope` — create + persist e-sign envelope
-- `POST /api/esign/webhook` — verify signature + update envelope state
+## Data models
 
-### Payments / Payouts
-- `POST /api/payments/intent` — create + persist Stripe PaymentIntent
-- `POST /api/payments/webhook` — verify Stripe signature + update transaction status
-- `POST /api/payments/connect-account` — create/update Stripe Connect seller account
-- `POST /api/payments/payout` — send seller payout (transfer) + persist record
+Core: `User`, `Property`, `Offer`, `KycSession`, `ESignEnvelope`, `DealTransaction`, `PayoutAccount`, `Payout`
 
-## Middleware protection
+Phase 5:
+- `WebhookEvent` (idempotency)
+- `AuditLog` (auditable actions)
 
-`middleware.ts` guards:
-- `/submit`
-- `/dashboard`
-- `/deal-room`
+## Env vars (important)
 
-and redirects unauthenticated users to `/login`.
+- `AUTH_SECRET`, `AUTH_URL` (Auth.js)
+- `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (compat)
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+- `KYC_WEBHOOK_SECRET`, `ESIGN_WEBHOOK_SECRET`
 
-## New phase 4 data models
+## Next production tasks
 
-- `PayoutAccount` — Stripe Connect account linkage
-- `Payout` — disbursement ledger
-
-(Phase 3 models remain: `KycSession`, `ESignEnvelope`, `DealTransaction`.)
-
-## Integration notes
-
-- E-sign + KYC provider calls are implemented through adapter modules in `lib/integrations/*` with stubs that switch to provider mode when credentials are present.
-- KYC webhooks use HMAC SHA256 via `KYC_WEBHOOK_SECRET` and `x-kyc-signature`.
-- E-sign webhooks use HMAC SHA256 via `ESIGN_WEBHOOK_SECRET` and `x-esign-signature`.
-- Stripe webhooks require `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`.
-- Payments support local mock mode automatically if Stripe key is absent.
-
-## Production hardening checklist (next)
-
-- Replace stub integration code in `lib/integrations/esign.ts` and `lib/integrations/kyc.ts` with live SDK calls.
-- Add idempotency keys + replay protection tables for all webhooks.
-- Migrate MVP cookie auth to Auth.js or Clerk with signed sessions + RBAC middleware.
-- Add comprehensive audit logs for moderation, KYC overrides, and payouts.
+- Finish live SDK calls in `lib/integrations/esign.ts` and `lib/integrations/kyc.ts`.
+- Move UI login fully to Auth.js credential sign-in.
+- Add RBAC checks to middleware by role claims.
+- Add filtered audit log dashboard for admin ops.
 
 ## Legal notes
 
