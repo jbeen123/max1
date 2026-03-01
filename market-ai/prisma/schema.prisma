@@ -315,3 +315,12 @@ model QueueCircuitEvent {
 
   @@index([queueKey, createdAt])
 }
+
+model QueuePolicy {
+  queueKey       String   @id
+  failThreshold  Int      @default(5)
+  openMs         Int      @default(300000)
+  alertWebhook   String?
+  enabled        Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+}

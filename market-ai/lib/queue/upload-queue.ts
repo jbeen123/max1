@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { uploadAttestationOffbox } from "@/lib/storage/attestation-upload";
+import { sendQueueAlert } from "@/lib/alerts/queue-alert";
 
 function categorizeError(error: unknown) {
   const msg = String(error || "").toLowerCase();
@@ -11,15 +12,27 @@ function categorizeError(error: unknown) {
   return "unknown";
 }
 
-const FAIL_THRESHOLD = Number(process.env.QUEUE_CIRCUIT_FAIL_THRESHOLD || "5");
-const OPEN_MS = Number(process.env.QUEUE_CIRCUIT_OPEN_MS || String(5 * 60 * 1000));
-
 async function getCircuit(queueKey: string) {
   const state = await db.queueCircuitState.findUnique({ where: { queueKey } });
   if (!state) {
     return db.queueCircuitState.create({ data: { queueKey, isOpen: false, failCountWindow: 0 } });
   }
   return state;
+}
+
+async function getPolicy(queueKey: string) {
+  const policy = await db.queuePolicy.findUnique({ where: { queueKey } });
+  if (policy) return policy;
+
+  return db.queuePolicy.create({
+    data: {
+      queueKey,
+      failThreshold: Number(process.env.QUEUE_CIRCUIT_FAIL_THRESHOLD || "5"),
+      openMs: Number(process.env.QUEUE_CIRCUIT_OPEN_MS || String(5 * 60 * 1000)),
+      alertWebhook: process.env.QUEUE_ALERT_WEBHOOK_URL || null,
+      enabled: true,
+    },
+  });
 }
 
 export async function enqueueAttestationUpload(attestationId: string, payload: unknown) {
@@ -35,7 +48,9 @@ export async function enqueueAttestationUpload(attestationId: string, payload: u
 
 export async function processUploadQueue(limit = 10) {
   const queueKey = "ATTESTATION_UPLOAD";
-  const circuit = await getCircuit(queueKey);
+  const [circuit, policy] = await Promise.all([getCircuit(queueKey), getPolicy(queueKey)]);
+
+  if (!policy.enabled) return [{ id: "policy", status: "SKIPPED", error: "Queue disabled by policy" }];
 
   if (circuit.isOpen && circuit.openUntil && circuit.openUntil > new Date()) {
     return [{ id: "circuit", status: "SKIPPED", error: `Circuit open until ${circuit.openUntil.toISOString()}` }];
@@ -89,7 +104,7 @@ export async function processUploadQueue(limit = 10) {
 
   if (failuresThisRun > 0) {
     const nextFailCount = circuit.failCountWindow + failuresThisRun;
-    const shouldOpen = nextFailCount >= FAIL_THRESHOLD;
+    const shouldOpen = nextFailCount >= policy.failThreshold;
 
     await db.queueCircuitState.upsert({
       where: { queueKey },
@@ -97,19 +112,20 @@ export async function processUploadQueue(limit = 10) {
         failCountWindow: shouldOpen ? 0 : nextFailCount,
         isOpen: shouldOpen,
         openedAt: shouldOpen ? new Date() : circuit.openedAt,
-        openUntil: shouldOpen ? new Date(Date.now() + OPEN_MS) : circuit.openUntil,
+        openUntil: shouldOpen ? new Date(Date.now() + policy.openMs) : circuit.openUntil,
       },
       create: {
         queueKey,
         failCountWindow: shouldOpen ? 0 : nextFailCount,
         isOpen: shouldOpen,
         openedAt: shouldOpen ? new Date() : null,
-        openUntil: shouldOpen ? new Date(Date.now() + OPEN_MS) : null,
+        openUntil: shouldOpen ? new Date(Date.now() + policy.openMs) : null,
       },
     });
 
     if (shouldOpen) {
-      await db.queueCircuitEvent.create({ data: { queueKey, eventType: "OPENED", reason: `failures>=${FAIL_THRESHOLD}` } });
+      await db.queueCircuitEvent.create({ data: { queueKey, eventType: "OPENED", reason: `failures>=${policy.failThreshold}` } });
+      await sendQueueAlert({ queueKey, webhookUrl: policy.alertWebhook, message: `Circuit opened after ${nextFailCount} failures` });
     }
   } else if (jobs.length > 0) {
     await db.queueCircuitState.updateMany({ where: { queueKey }, data: { failCountWindow: 0 } });

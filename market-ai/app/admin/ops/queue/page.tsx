@@ -64,6 +64,25 @@ export default function OpsQueuePage() {
     await load();
   }
 
+  async function updatePolicy(formData: FormData) {
+    const payload = {
+      queueKey: "ATTESTATION_UPLOAD",
+      failThreshold: Number(formData.get("failThreshold")),
+      openMs: Number(formData.get("openMs")),
+      enabled: formData.get("enabled") === "on",
+      alertWebhook: String(formData.get("alertWebhook") || "") || null,
+    };
+
+    const res = await fetch("/api/admin/ops/queue/config", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    setMsg(res.ok ? "Policy updated" : data?.error || "Policy update failed");
+    await load();
+  }
+
   return (
     <section className="grid" style={{ gap: "1rem" }}>
       <div className="card">
@@ -85,9 +104,23 @@ export default function OpsQueuePage() {
             <li>Succeeded (24h): {metrics.succeeded24h}</li>
             <li>Failed (24h): {metrics.failed24h}</li>
             <li>Circuit: {metrics?.circuit?.isOpen ? `OPEN until ${metrics?.circuit?.openUntil}` : "CLOSED"}</li>
+            <li>Latency p50/p95/p99 (ms): {metrics?.latencyMs?.p50} / {metrics?.latencyMs?.p95} / {metrics?.latencyMs?.p99}</li>
             <li>Prometheus: <a href="/api/admin/ops/queue/metrics/prometheus" target="_blank">/api/admin/ops/queue/metrics/prometheus</a></li>
           </ul>
         )}
+      </div>
+
+      <div className="card">
+        <h3>Runtime Queue Policy</h3>
+        <form action={updatePolicy} className="grid grid-3">
+          <input name="failThreshold" type="number" min={1} max={100} defaultValue={metrics?.policy?.failThreshold ?? 5} />
+          <input name="openMs" type="number" min={1000} defaultValue={metrics?.policy?.openMs ?? 300000} />
+          <input name="alertWebhook" placeholder="Alert webhook URL" defaultValue={metrics?.policy?.alertWebhook ?? ""} />
+          <label style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
+            <input name="enabled" type="checkbox" defaultChecked={metrics?.policy?.enabled ?? true} style={{ width: "auto" }} /> Enabled
+          </label>
+          <button type="submit">Save Policy</button>
+        </form>
       </div>
 
       <div className="card">
