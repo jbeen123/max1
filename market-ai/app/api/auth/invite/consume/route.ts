@@ -23,9 +23,20 @@ export async function POST(req: Request) {
 
     if (!invite) return NextResponse.json({ error: "Invite not found" }, { status: 404 });
     if (invite.revokedAt) return NextResponse.json({ error: "Invite revoked" }, { status: 400 });
-    if (input.ts && input.sig && !verifyInviteSignature(invite.token, input.ts, input.sig)) {
+    if (!input.ts || !input.sig) {
+      return NextResponse.json({ error: "Signed invite parameters required" }, { status: 400 });
+    }
+    if (!verifyInviteSignature(invite.token, input.ts, input.sig)) {
       return NextResponse.json({ error: "Invalid invite signature" }, { status: 400 });
     }
+
+    const nonceKey = `${invite.token}:${input.ts}:${input.sig}`;
+    try {
+      await db.inviteNonceUse.create({ data: { nonceKey } });
+    } catch {
+      return NextResponse.json({ error: "Invite link already used (replay blocked)" }, { status: 409 });
+    }
+
     if (invite.consumedAt) return NextResponse.json({ error: "Invite already used" }, { status: 400 });
     if (invite.expiresAt < new Date()) return NextResponse.json({ error: "Invite expired" }, { status: 400 });
 

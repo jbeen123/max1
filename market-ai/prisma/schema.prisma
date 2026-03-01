@@ -253,3 +253,17 @@ model RateLimitEvent {
 
   @@index([scope, key, createdAt])
 }
+
+model InviteNonceUse {
+  id            String   @id @default(cuid())
+  nonceKey      String   @unique
+  createdAt     DateTime @default(now())
+}
+
+model AuditAttestation {
+  id            String   @id @default(cuid())
+  tipHash       String
+  logCount      Int
+  storagePath   String?
+  createdAt     DateTime @default(now())
+}

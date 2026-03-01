@@ -15,64 +15,51 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase10_resilience_controls
+   npx prisma migrate dev --name phase11_nonce_scheduler_attestation
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 10 added
+## What phase 11 added
 
-- **Audit hash-chain verification endpoint**
-  - `GET /api/admin/audit/verify`
-  - Recomputes chain integrity and reports first broken record
-- **Rate-limit pruning operation**
-  - `POST /api/admin/ops/prune-rate-limits?keepHours=72`
-  - Deletes stale `RateLimitEvent` records and logs audit event
-- **Signed invite URLs (nonce-less HMAC signature)**
-  - Invite links now include `ts` + `sig`
-  - `invite/consume` validates signature + max age
-- **Edge-aware abuse controls (API layer)**
-  - Invite consume applies IP-based throttling (`invite:consume:ip`)
-  - Existing admin invite create/resend limits retained
+- **One-time invite nonce replay protection**
+  - Invite consume now requires signed params (`ts`, `sig`)
+  - Nonce lock persisted in `InviteNonceUse`
+  - Replay attempts are blocked with conflict response
+- **Maintenance runner endpoint**
+  - `POST /api/admin/ops/run-maintenance`
+  - Runs bundled housekeeping tasks (currently rate-limit pruning)
+- **Audit attestation snapshots**
+  - `POST /api/admin/ops/attest-audit`
+  - Writes attestations to `attestations/*.json`
+  - Stores metadata in `AuditAttestation` table
+- **Prune endpoint refactor**
+  - `prune-rate-limits` now uses shared maintenance helper
 
 ## API highlights
 
-### Audit + ops
+### Security + integrity
 - `GET /api/admin/audit/verify`
+- `POST /api/admin/ops/attest-audit`
 - `POST /api/admin/ops/prune-rate-limits?keepHours=72`
+- `POST /api/admin/ops/run-maintenance`
 
-### Invite flow
-- `GET /api/admin/invites?pageSize=20&cursor=<id>`
-- `POST /api/admin/invites`
-- `PATCH /api/admin/invites` (`revoke` | `resend`)
-- `POST /api/auth/invite/consume`
+### Invite security
+- `POST /api/auth/invite/consume` (signed params required)
 
-### Cursor paginated admin APIs
-- `GET /api/admin/users?pageSize=20&cursor=<id>&q=search`
-- `GET /api/admin/audit?pageSize=30&cursor=<id>`
+## Data model additions (phase 11)
 
-## Data model additions (phase 10)
-
-(uses phase-9 schema additions)
-- `RateLimitEvent` for throttling ledger
-- `AuditLog.prevHash/hash` for chain integrity
-- `InviteToken.lastSentAt/resendCount` for cooldown controls
-
-## Env vars (new/important)
-
-- `AUDIT_CHAIN_SECRET`
-- `INVITE_LINK_SECRET`
-- `RESEND_API_KEY`
-- `INVITE_EMAIL_FROM`
+- `InviteNonceUse` (replay lock)
+- `AuditAttestation` (snapshot registry)
 
 ## Next production tasks
 
-- Add one-time nonce table for signed invite links (strict replay prevention).
-- Add scheduled pruning job (cron/queue) for `RateLimitEvent`.
-- Add chain attestation snapshots to off-box storage.
-- Add WAF/edge policy for IP/device fingerprint abuse blocking.
+- Schedule `run-maintenance` + `attest-audit` via cron/queue.
+- Add off-box attestation upload (S3/R2/GCS) with integrity checksum.
+- Add edge proxy enforcement using `EDGE_SHARED_SECRET` for trusted headers.
+- Build admin ops dashboard for maintenance/attestation history.
 
 ## Legal notes
 

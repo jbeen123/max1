@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { pruneRateLimitEvents } from "@/lib/ops/maintenance";
 
 export async function POST(req: Request) {
   const auth = await requireRole(["ADMIN"]);
@@ -9,17 +9,16 @@ export async function POST(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const keepHours = Math.max(1, Math.min(24 * 30, Number(searchParams.get("keepHours") || "72")));
-  const cutoff = new Date(Date.now() - keepHours * 60 * 60 * 1000);
 
-  const result = await db.rateLimitEvent.deleteMany({ where: { createdAt: { lt: cutoff } } });
+  const result = await pruneRateLimitEvents(keepHours);
 
   await logAudit({
     actorId: auth.user.id,
     action: "RATE_LIMIT_EVENTS_PRUNED",
     targetType: "RateLimitEvent",
     targetId: "bulk",
-    metadata: { keepHours, deleted: result.count },
+    metadata: result,
   });
 
-  return NextResponse.json({ ok: true, deleted: result.count, keepHours });
+  return NextResponse.json({ ok: true, ...result });
 }
