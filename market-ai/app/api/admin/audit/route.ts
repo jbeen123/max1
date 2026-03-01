@@ -10,20 +10,24 @@ export async function GET(req: Request) {
   const action = searchParams.get("action") || undefined;
   const targetType = searchParams.get("targetType") || undefined;
   const format = searchParams.get("format") || "json";
+  const page = Math.max(1, Number(searchParams.get("page") || "1"));
+  const pageSize = Math.min(500, Math.max(1, Number(searchParams.get("pageSize") || (format === "csv" ? "500" : "30"))));
+  const skip = (page - 1) * pageSize;
 
-  const logs = await db.auditLog.findMany({
-    where: {
-      action: action ? { contains: action, mode: "insensitive" } : undefined,
-      targetType: targetType ? { contains: targetType, mode: "insensitive" } : undefined,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
+  const where = {
+    action: action ? { contains: action, mode: "insensitive" as const } : undefined,
+    targetType: targetType ? { contains: targetType, mode: "insensitive" as const } : undefined,
+  };
+
+  const [total, logs] = await Promise.all([
+    db.auditLog.count({ where }),
+    db.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, skip, take: pageSize }),
+  ]);
 
   if (format === "csv") {
-    const header = "createdAt,actorId,action,targetType,targetId\n";
+    const header = "createdAt,actorId,action,targetType,targetId,metadata\n";
     const rows = logs
-      .map((l) => [l.createdAt.toISOString(), l.actorId ?? "", l.action, l.targetType, l.targetId].map((v) => `\"${String(v).replaceAll('"', '""')}\"`).join(","))
+      .map((l) => [l.createdAt.toISOString(), l.actorId ?? "", l.action, l.targetType, l.targetId, JSON.stringify(l.metadata ?? {})].map((v) => `\"${String(v).replaceAll('"', '""')}\"`).join(","))
       .join("\n");
 
     return new NextResponse(`${header}${rows}\n`, {
@@ -34,5 +38,5 @@ export async function GET(req: Request) {
     });
   }
 
-  return NextResponse.json(logs);
+  return NextResponse.json({ total, page, pageSize, logs });
 }

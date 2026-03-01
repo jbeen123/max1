@@ -15,54 +15,64 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase7_admin_invites_drilldown
+   npx prisma migrate dev --name phase8_admin_ops_scaling
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 7 added
+## What phase 8 added
 
-- **Admin user management UI** at `/admin/users`
-  - Update user role (BUYER/SELLER/ADMIN)
-  - Toggle verification status
-- **Invite flow**
-  - Create invites at `/admin/invites`
-  - Invite API: `GET/POST /api/admin/invites`
-  - Invite consume API: `POST /api/auth/invite/consume`
-  - Login page auto-consumes invite token when present
-- **Audit drill-down**
-  - Audit list links to `/admin/audit/[id]`
-  - Detail page shows full metadata JSON
-- **Admin users API**
-  - `GET/PATCH /api/admin/users`
+- **Invite revoke + resend**
+  - `PATCH /api/admin/invites` with actions `revoke` and `resend`
+  - Invite records now support `revokedAt` and `revokedById`
+- **Invite email delivery integration**
+  - Added `lib/notify.ts` with Resend provider support
+  - Invite create/resend attempts delivery and logs outcome
+- **Pagination + search in admin tables**
+  - Users page supports search and paging
+  - Invites page supports paging
+  - Audit page supports paging
+- **Richer audit drill-down**
+  - Detail page now renders before/after diff table when available
+  - Audit API CSV export includes metadata column
 
 ## API highlights
 
-### Admin
-- `GET/PATCH /api/admin/users`
-- `GET/POST /api/admin/invites`
-- `GET /api/admin/audit`
+### Admin users
+- `GET /api/admin/users?page=1&pageSize=20&q=search`
+- `PATCH /api/admin/users`
+
+### Admin invites
+- `GET /api/admin/invites?page=1&pageSize=20`
+- `POST /api/admin/invites`
+- `PATCH /api/admin/invites` (`revoke` | `resend`)
+
+### Audit
+- `GET /api/admin/audit?page=1&pageSize=30`
 - `GET /api/admin/audit?format=csv`
-- `GET/POST /api/admin/kyc`
 
-### Auth
+### Invite onboarding
 - `POST /api/auth/invite/consume`
-- `GET/POST /api/auth/[...nextauth]`
-- `POST /api/auth/login` (legacy bootstrap)
 
-## Data models
+## Data model changes
 
-- Existing: `User`, `Property`, `Offer`, `KycSession`, `ESignEnvelope`, `DealTransaction`, `PayoutAccount`, `Payout`, `WebhookEvent`, `AuditLog`
-- New in phase 7: `InviteToken`
+- `InviteToken` now includes:
+  - `revokedAt`
+  - `revokedById`
+
+## Env vars (new in phase 8)
+
+- `RESEND_API_KEY`
+- `INVITE_EMAIL_FROM`
 
 ## Next production tasks
 
-- Deliver invite links by email/SMS provider and add resend/revoke.
-- Add stronger invite binding (single-use + email verification challenge).
-- Add field-level audit diffs for every admin mutation.
-- Add pagination + full-text search in admin tables.
+- Add invite resend throttling + cooldowns.
+- Add soft-delete/archive for users and invites.
+- Add cursor-based pagination for very large admin tables.
+- Add email template branding + signed deep links.
 
 ## Legal notes
 

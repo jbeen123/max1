@@ -14,16 +14,21 @@ type UserItem = {
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [msg, setMsg] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [q, setQ] = useState("");
+  const pageSize = 20;
 
   async function load() {
-    const res = await fetch("/api/admin/users");
+    const res = await fetch(`/api/admin/users?page=${page}&pageSize=${pageSize}&q=${encodeURIComponent(q)}`);
     const data = await res.json();
-    setUsers(Array.isArray(data) ? data : []);
+    setUsers(Array.isArray(data?.users) ? data.users : []);
+    setTotal(Number(data?.total || 0));
   }
 
   useEffect(() => {
     load();
-  }, []);
+  }, [page]);
 
   async function updateUser(userId: string, role: UserItem["role"], isVerified: boolean) {
     const res = await fetch("/api/admin/users", {
@@ -38,7 +43,14 @@ export default function AdminUsersPage() {
 
   return (
     <section className="grid" style={{ gap: "1rem" }}>
-      <div className="card"><h2>Admin · User Management</h2></div>
+      <div className="card grid" style={{ gap: ".75rem" }}>
+        <h2>Admin · User Management</h2>
+        <div className="grid grid-3">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search email/name" />
+          <button onClick={() => { setPage(1); load(); }}>Search</button>
+          <p>Total: {total}</p>
+        </div>
+      </div>
       {users.map((u) => (
         <div key={u.id} className="card grid" style={{ gap: ".5rem" }}>
           <strong>{u.email}</strong>
@@ -50,17 +62,16 @@ export default function AdminUsersPage() {
               <option value="ADMIN">ADMIN</option>
             </select>
             <label style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
-              <input
-                type="checkbox"
-                defaultChecked={u.isVerified}
-                onChange={(e) => updateUser(u.id, u.role, e.target.checked)}
-                style={{ width: "auto" }}
-              />
+              <input type="checkbox" defaultChecked={u.isVerified} onChange={(e) => updateUser(u.id, u.role, e.target.checked)} style={{ width: "auto" }} />
               Verified
             </label>
           </div>
         </div>
       ))}
+      <div style={{ display: "flex", gap: ".5rem" }}>
+        <button className="ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
+        <button className="ghost" disabled={page * pageSize >= total} onClick={() => setPage((p) => p + 1)}>Next</button>
+      </div>
       {msg && <p>{msg}</p>}
     </section>
   );

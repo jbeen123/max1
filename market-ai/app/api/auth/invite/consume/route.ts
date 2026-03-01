@@ -3,10 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 
-const schema = z.object({
-  token: z.string().min(8),
-  name: z.string().optional(),
-});
+const schema = z.object({ token: z.string().min(8), name: z.string().optional() });
 
 export async function POST(req: Request) {
   try {
@@ -14,31 +11,24 @@ export async function POST(req: Request) {
     const invite = await db.inviteToken.findUnique({ where: { token: input.token } });
 
     if (!invite) return NextResponse.json({ error: "Invite not found" }, { status: 404 });
+    if (invite.revokedAt) return NextResponse.json({ error: "Invite revoked" }, { status: 400 });
     if (invite.consumedAt) return NextResponse.json({ error: "Invite already used" }, { status: 400 });
     if (invite.expiresAt < new Date()) return NextResponse.json({ error: "Invite expired" }, { status: 400 });
 
     const user = await db.user.upsert({
       where: { email: invite.email },
       update: { role: invite.role, name: input.name ?? undefined },
-      create: {
-        email: invite.email,
-        name: input.name,
-        role: invite.role,
-        isVerified: invite.role !== "ADMIN",
-      },
+      create: { email: invite.email, name: input.name, role: invite.role, isVerified: invite.role !== "ADMIN" },
     });
 
-    await db.inviteToken.update({
-      where: { id: invite.id },
-      data: { consumedAt: new Date(), consumedById: user.id },
-    });
+    await db.inviteToken.update({ where: { id: invite.id }, data: { consumedAt: new Date(), consumedById: user.id } });
 
     await logAudit({
       actorId: user.id,
       action: "INVITE_CONSUMED",
       targetType: "InviteToken",
       targetId: invite.id,
-      metadata: { email: invite.email, role: invite.role },
+      metadata: { before: { consumedAt: invite.consumedAt }, after: { consumedById: user.id } },
     });
 
     return NextResponse.json({ ok: true, user });

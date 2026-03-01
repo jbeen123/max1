@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth";
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ action?: string; targetType?: string }>;
+  searchParams: Promise<{ action?: string; targetType?: string; page?: string }>;
 }) {
   const auth = await requireRole(["ADMIN"]);
   if (!auth.ok) {
@@ -15,15 +15,19 @@ export default async function AuditPage({
   const sp = await searchParams;
   const action = sp.action || "";
   const targetType = sp.targetType || "";
+  const page = Math.max(1, Number(sp.page || "1"));
+  const pageSize = 30;
+  const skip = (page - 1) * pageSize;
 
-  const logs = await db.auditLog.findMany({
-    where: {
-      action: action ? { contains: action, mode: "insensitive" } : undefined,
-      targetType: targetType ? { contains: targetType, mode: "insensitive" } : undefined,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
+  const where = {
+    action: action ? { contains: action, mode: "insensitive" as const } : undefined,
+    targetType: targetType ? { contains: targetType, mode: "insensitive" as const } : undefined,
+  };
+
+  const [total, logs] = await Promise.all([
+    db.auditLog.count({ where }),
+    db.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, skip, take: pageSize }),
+  ]);
 
   const csvUrl = `/api/admin/audit?format=csv&action=${encodeURIComponent(action)}&targetType=${encodeURIComponent(targetType)}`;
 
@@ -36,20 +40,12 @@ export default async function AuditPage({
           <input name="targetType" placeholder="Filter target type" defaultValue={targetType} />
           <button type="submit">Apply Filters</button>
         </form>
-        <p style={{ marginTop: ".75rem" }}><Link href={csvUrl}>Export CSV</Link></p>
+        <p style={{ marginTop: ".75rem" }}><Link href={csvUrl}>Export CSV</Link> · Total {total}</p>
       </div>
 
       <div className="card" style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={{ textAlign: "left" }}>Time</th>
-              <th style={{ textAlign: "left" }}>Action</th>
-              <th style={{ textAlign: "left" }}>Target</th>
-              <th style={{ textAlign: "left" }}>Actor</th>
-              <th style={{ textAlign: "left" }}>Details</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Time</th><th>Action</th><th>Target</th><th>Actor</th><th>Details</th></tr></thead>
           <tbody>
             {logs.map((log) => (
               <tr key={log.id}>
@@ -62,6 +58,10 @@ export default async function AuditPage({
             ))}
           </tbody>
         </table>
+        <div style={{ display: "flex", gap: ".5rem", marginTop: ".75rem" }}>
+          {page > 1 && <Link href={`/admin/audit?action=${encodeURIComponent(action)}&targetType=${encodeURIComponent(targetType)}&page=${page - 1}`}>Prev</Link>}
+          {page * pageSize < total && <Link href={`/admin/audit?action=${encodeURIComponent(action)}&targetType=${encodeURIComponent(targetType)}&page=${page + 1}`}>Next</Link>}
+        </div>
         {logs.length === 0 && <p>No logs found.</p>}
       </div>
     </section>
