@@ -1,4 +1,7 @@
 import { db } from "@/lib/db";
+import { ModerationQueue } from "@/components/ModerationQueue";
+import { KycPanel } from "@/components/KycPanel";
+import { IntegrationsPanel } from "@/components/IntegrationsPanel";
 
 export default async function DashboardPage() {
   const [users, listings, offers, pending, active] = await Promise.all([
@@ -26,17 +29,9 @@ export default async function DashboardPage() {
         <div className="card"><h3>Active Listings</h3><p>{active}</p></div>
       </div>
 
-      <div className="card">
-        <h3>Moderation Queue</h3>
-        {queue.length === 0 ? <p>No pending listings.</p> : (
-          <ul>
-            {queue.map((q) => (
-              <li key={q.id}>{q.title} — {q.county}, {q.state} (${q.askingPrice.toLocaleString()}) · seller {q.seller.email}</li>
-            ))}
-          </ul>
-        )}
-        <p style={{ color: "#94a3b8" }}>Use API: POST /api/moderation with action APPROVE or REJECT.</p>
-      </div>
+      <ModerationQueue initialQueue={queue} />
+      <KycPanel />
+      <IntegrationsPanel />
     </section>
   );
 }
