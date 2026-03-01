@@ -15,51 +15,59 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase11_nonce_scheduler_attestation
+   npx prisma migrate dev --name phase12_ops_automation_offbox
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 11 added
+## What phase 12 added
 
-- **One-time invite nonce replay protection**
-  - Invite consume now requires signed params (`ts`, `sig`)
-  - Nonce lock persisted in `InviteNonceUse`
-  - Replay attempts are blocked with conflict response
-- **Maintenance runner endpoint**
-  - `POST /api/admin/ops/run-maintenance`
-  - Runs bundled housekeeping tasks (currently rate-limit pruning)
-- **Audit attestation snapshots**
-  - `POST /api/admin/ops/attest-audit`
-  - Writes attestations to `attestations/*.json`
-  - Stores metadata in `AuditAttestation` table
-- **Prune endpoint refactor**
-  - `prune-rate-limits` now uses shared maintenance helper
+- **Cron wiring path**
+  - Script: `scripts/cron-phase12.sh`
+  - Runs maintenance + attestation + upload in sequence
+  - Uses `x-edge-secret` with `EDGE_SHARED_SECRET`
+- **Off-box attestation upload**
+  - `POST /api/admin/ops/attest-audit/upload`
+  - Uses `OFFBOX_ATTESTATION_URL` (+ optional bearer token)
+  - Upload helper: `lib/storage/attestation-upload.ts`
+- **Admin ops dashboard UI**
+  - New page: `/admin/ops`
+  - Shows recent attestation records + latest prune timestamp
+- **Ops access helper for automation**
+  - `lib/auth-edge.ts` enables trusted edge/system calls with shared secret
 
 ## API highlights
 
-### Security + integrity
-- `GET /api/admin/audit/verify`
-- `POST /api/admin/ops/attest-audit`
-- `POST /api/admin/ops/prune-rate-limits?keepHours=72`
 - `POST /api/admin/ops/run-maintenance`
+- `POST /api/admin/ops/prune-rate-limits?keepHours=72`
+- `POST /api/admin/ops/attest-audit`
+- `POST /api/admin/ops/attest-audit/upload`
+- `GET /api/admin/audit/verify`
 
-### Invite security
-- `POST /api/auth/invite/consume` (signed params required)
+## Automation example (cron)
 
-## Data model additions (phase 11)
+Run every hour:
 
-- `InviteNonceUse` (replay lock)
-- `AuditAttestation` (snapshot registry)
+```bash
+0 * * * * cd /home/jahffy/.openclaw/workspace/market-ai && EDGE_SHARED_SECRET='your-secret' BASE_URL='http://localhost:3000' ./scripts/cron-phase12.sh >> /tmp/marketai-maint.log 2>&1
+```
+
+## Env vars (phase 12)
+
+- `EDGE_SHARED_SECRET`
+- `OFFBOX_ATTESTATION_URL`
+- `OFFBOX_ATTESTATION_TOKEN`
+
+(Existing important vars: `AUDIT_CHAIN_SECRET`, `INVITE_LINK_SECRET`, `RESEND_API_KEY`, auth vars)
 
 ## Next production tasks
 
-- Schedule `run-maintenance` + `attest-audit` via cron/queue.
-- Add off-box attestation upload (S3/R2/GCS) with integrity checksum.
-- Add edge proxy enforcement using `EDGE_SHARED_SECRET` for trusted headers.
-- Build admin ops dashboard for maintenance/attestation history.
+- Replace HTTP off-box upload with signed object-store upload (S3/R2) + checksum manifest.
+- Add retry/backoff + dead-letter handling for failed uploads.
+- Add explicit scheduler lock to avoid concurrent maintenance runs.
+- Build ops UI buttons for manual run + upload trigger.
 
 ## Legal notes
 
