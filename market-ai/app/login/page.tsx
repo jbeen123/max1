@@ -14,10 +14,12 @@ export default function LoginPage() {
     if (!invite) return;
 
     const name = searchParams.get("name") || undefined;
+    const ts = searchParams.get("ts");
+    const sig = searchParams.get("sig");
     fetch("/api/auth/invite/consume", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: invite, name }),
+      body: JSON.stringify({ token: invite, name, ts: ts ? Number(ts) : undefined, sig: sig || undefined }),
     }).then(async (res) => {
       const data = await res.json();
       if (res.ok) setMsg(`Invite accepted for ${data.user.email}. Please log in.`);

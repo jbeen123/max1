@@ -15,62 +15,64 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase9_security_controls
+   npx prisma migrate dev --name phase10_resilience_controls
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 9 added
+## What phase 10 added
 
-- **Invite rate limiting + cooldowns**
-  - Invite creation limited per admin per hour
-  - Invite resend limited per admin per hour
-  - 60-second resend cooldown per invite token
-- **Cursor pagination for admin APIs**
-  - Users, Invites, and Audit endpoints now support `cursor` + `pageSize`
-- **Audit chain integrity (tamper-evident)**
-  - `AuditLog` now stores `prevHash` + `hash`
-  - `logAudit()` computes HMAC hash chain with `AUDIT_CHAIN_SECRET`
-- **Operational rate-limit ledger**
-  - `RateLimitEvent` model tracks control events for throttling decisions
+- **Audit hash-chain verification endpoint**
+  - `GET /api/admin/audit/verify`
+  - Recomputes chain integrity and reports first broken record
+- **Rate-limit pruning operation**
+  - `POST /api/admin/ops/prune-rate-limits?keepHours=72`
+  - Deletes stale `RateLimitEvent` records and logs audit event
+- **Signed invite URLs (nonce-less HMAC signature)**
+  - Invite links now include `ts` + `sig`
+  - `invite/consume` validates signature + max age
+- **Edge-aware abuse controls (API layer)**
+  - Invite consume applies IP-based throttling (`invite:consume:ip`)
+  - Existing admin invite create/resend limits retained
 
 ## API highlights
 
-### Admin users (cursor pagination)
-- `GET /api/admin/users?pageSize=20&cursor=<id>&q=search`
-- `PATCH /api/admin/users`
+### Audit + ops
+- `GET /api/admin/audit/verify`
+- `POST /api/admin/ops/prune-rate-limits?keepHours=72`
 
-### Admin invites (cursor pagination + actions)
+### Invite flow
 - `GET /api/admin/invites?pageSize=20&cursor=<id>`
 - `POST /api/admin/invites`
 - `PATCH /api/admin/invites` (`revoke` | `resend`)
+- `POST /api/auth/invite/consume`
 
-### Audit (cursor pagination)
+### Cursor paginated admin APIs
+- `GET /api/admin/users?pageSize=20&cursor=<id>&q=search`
 - `GET /api/admin/audit?pageSize=30&cursor=<id>`
-- `GET /api/admin/audit?format=csv`
 
-## Data model changes (phase 9)
+## Data model additions (phase 10)
 
-- `InviteToken`
-  - `lastSentAt`
-  - `resendCount`
-- `AuditLog`
-  - `prevHash`
-  - `hash`
-- `RateLimitEvent`
+(uses phase-9 schema additions)
+- `RateLimitEvent` for throttling ledger
+- `AuditLog.prevHash/hash` for chain integrity
+- `InviteToken.lastSentAt/resendCount` for cooldown controls
 
-## Env vars (new in phase 9)
+## Env vars (new/important)
 
 - `AUDIT_CHAIN_SECRET`
+- `INVITE_LINK_SECRET`
+- `RESEND_API_KEY`
+- `INVITE_EMAIL_FROM`
 
 ## Next production tasks
 
-- Add background pruning for `RateLimitEvent` rows.
-- Add endpoint to verify full audit hash chain integrity.
-- Add hard IP-based throttling at edge/load balancer.
-- Add signed/expiring invite links with nonce binding.
+- Add one-time nonce table for signed invite links (strict replay prevention).
+- Add scheduled pruning job (cron/queue) for `RateLimitEvent`.
+- Add chain attestation snapshots to off-box storage.
+- Add WAF/edge policy for IP/device fingerprint abuse blocking.
 
 ## Legal notes
 

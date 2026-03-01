@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { sendInviteEmail } from "@/lib/notify";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { signInviteToken } from "@/lib/security/signed-invite";
 
 const createSchema = z.object({
   email: z.string().email(),
@@ -62,7 +63,9 @@ export async function POST(req: Request) {
       },
     });
 
-    const inviteUrl = `/login?invite=${invite.token}&email=${encodeURIComponent(invite.email)}`;
+    const ts = Date.now();
+    const sig = signInviteToken(invite.token, ts);
+    const inviteUrl = `/login?invite=${invite.token}&email=${encodeURIComponent(invite.email)}&ts=${ts}&sig=${sig}`;
     const delivery = await sendInviteEmail({ to: invite.email, inviteUrl, role: invite.role });
 
     await logAudit({ actorId: auth.user.id, action: "INVITE_CREATED", targetType: "InviteToken", targetId: invite.id, metadata: { after: invite, delivery } });
@@ -94,7 +97,9 @@ export async function PATCH(req: Request) {
     const rl = await checkRateLimit({ scope: "invite:resend", key: auth.user.id, limit: 30, windowMs: 60 * 60 * 1000 });
     if (!rl.ok) return NextResponse.json({ error: "Rate limit reached for invite resends" }, { status: 429 });
 
-    const inviteUrl = `/login?invite=${invite.token}&email=${encodeURIComponent(invite.email)}`;
+    const ts = Date.now();
+    const sig = signInviteToken(invite.token, ts);
+    const inviteUrl = `/login?invite=${invite.token}&email=${encodeURIComponent(invite.email)}&ts=${ts}&sig=${sig}`;
     const delivery = await sendInviteEmail({ to: invite.email, inviteUrl, role: invite.role });
 
     const updated = await db.inviteToken.update({
