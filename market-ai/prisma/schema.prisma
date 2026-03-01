@@ -222,6 +222,8 @@ model AuditLog {
   targetType     String
   targetId       String
   metadata       Json?
+  prevHash       String?
+  hash           String?
   createdAt      DateTime @default(now())
 }
 
@@ -235,8 +237,19 @@ model InviteToken {
   consumedAt    DateTime?
   revokedAt     DateTime?
   revokedById   String?
+  lastSentAt    DateTime?
+  resendCount   Int      @default(0)
   expiresAt     DateTime
   createdAt     DateTime @default(now())
 
   createdBy     User?    @relation("InvitesSent", fields: [createdById], references: [id])
+}
+
+model RateLimitEvent {
+  id            String   @id @default(cuid())
+  scope         String
+  key           String
+  createdAt     DateTime @default(now())
+
+  @@index([scope, key, createdAt])
 }

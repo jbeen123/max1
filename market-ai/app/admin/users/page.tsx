@@ -14,21 +14,23 @@ type UserItem = {
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [msg, setMsg] = useState("");
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [stack, setStack] = useState<string[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const pageSize = 20;
 
-  async function load() {
-    const res = await fetch(`/api/admin/users?page=${page}&pageSize=${pageSize}&q=${encodeURIComponent(q)}`);
+  async function load(c?: string | null, resetStack = false) {
+    const res = await fetch(`/api/admin/users?pageSize=${pageSize}&q=${encodeURIComponent(q)}${c ? `&cursor=${c}` : ""}`);
     const data = await res.json();
-    setUsers(Array.isArray(data?.users) ? data.users : []);
-    setTotal(Number(data?.total || 0));
+    setUsers(Array.isArray(data?.items) ? data.items : []);
+    setNextCursor(data?.nextCursor ?? null);
+    if (resetStack) setStack([]);
   }
 
   useEffect(() => {
     load();
-  }, [page]);
+  }, []);
 
   async function updateUser(userId: string, role: UserItem["role"], isVerified: boolean) {
     const res = await fetch("/api/admin/users", {
@@ -38,7 +40,7 @@ export default function AdminUsersPage() {
     });
     const data = await res.json();
     setMsg(res.ok ? `Updated ${data.email}` : data?.error || "Update failed");
-    await load();
+    await load(cursor);
   }
 
   return (
@@ -47,8 +49,7 @@ export default function AdminUsersPage() {
         <h2>Admin · User Management</h2>
         <div className="grid grid-3">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search email/name" />
-          <button onClick={() => { setPage(1); load(); }}>Search</button>
-          <p>Total: {total}</p>
+          <button onClick={() => { setCursor(null); load(null, true); }}>Search</button>
         </div>
       </div>
       {users.map((u) => (
@@ -69,8 +70,18 @@ export default function AdminUsersPage() {
         </div>
       ))}
       <div style={{ display: "flex", gap: ".5rem" }}>
-        <button className="ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
-        <button className="ghost" disabled={page * pageSize >= total} onClick={() => setPage((p) => p + 1)}>Next</button>
+        <button className="ghost" disabled={stack.length === 0} onClick={() => {
+          const copy = [...stack];
+          const prev = copy.pop() ?? null;
+          setStack(copy);
+          setCursor(prev);
+          load(prev);
+        }}>Prev</button>
+        <button className="ghost" disabled={!nextCursor} onClick={() => {
+          setStack((s) => [...s, cursor ?? ""]);
+          setCursor(nextCursor);
+          load(nextCursor);
+        }}>Next</button>
       </div>
       {msg && <p>{msg}</p>}
     </section>

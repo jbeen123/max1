@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { sendInviteEmail } from "@/lib/notify";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const createSchema = z.object({
   email: z.string().email(),
@@ -21,16 +22,20 @@ export async function GET(req: Request) {
   if (!auth.ok) return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
-  const page = Math.max(1, Number(searchParams.get("page") || "1"));
   const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize") || "20")));
-  const skip = (page - 1) * pageSize;
+  const cursor = searchParams.get("cursor") || undefined;
 
-  const [total, invites] = await Promise.all([
-    db.inviteToken.count(),
-    db.inviteToken.findMany({ orderBy: { createdAt: "desc" }, skip, take: pageSize }),
-  ]);
+  const invites = await db.inviteToken.findMany({
+    orderBy: { createdAt: "desc" },
+    take: pageSize + 1,
+    ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+  });
 
-  return NextResponse.json({ total, page, pageSize, invites });
+  const hasMore = invites.length > pageSize;
+  const sliced = hasMore ? invites.slice(0, pageSize) : invites;
+  const nextCursor = hasMore ? sliced[sliced.length - 1]?.id : null;
+
+  return NextResponse.json({ items: sliced, nextCursor });
 }
 
 export async function POST(req: Request) {
@@ -39,6 +44,10 @@ export async function POST(req: Request) {
 
   try {
     const input = createSchema.parse(await req.json());
+
+    const rl = await checkRateLimit({ scope: "invite:create", key: auth.user.id, limit: 20, windowMs: 60 * 60 * 1000 });
+    if (!rl.ok) return NextResponse.json({ error: "Rate limit reached for invite creation" }, { status: 429 });
+
     const token = crypto.randomUUID().replaceAll("-", "");
     const expiresAt = new Date(Date.now() + input.expiresInHours * 60 * 60 * 1000);
 
@@ -49,20 +58,14 @@ export async function POST(req: Request) {
         role: input.role,
         createdById: auth.user.id,
         expiresAt,
+        lastSentAt: new Date(),
       },
     });
 
     const inviteUrl = `/login?invite=${invite.token}&email=${encodeURIComponent(invite.email)}`;
     const delivery = await sendInviteEmail({ to: invite.email, inviteUrl, role: invite.role });
 
-    await logAudit({
-      actorId: auth.user.id,
-      action: "INVITE_CREATED",
-      targetType: "InviteToken",
-      targetId: invite.id,
-      metadata: { after: invite, delivery },
-    });
-
+    await logAudit({ actorId: auth.user.id, action: "INVITE_CREATED", targetType: "InviteToken", targetId: invite.id, metadata: { after: invite, delivery } });
     return NextResponse.json({ ...invite, inviteUrl, delivery });
   } catch (error) {
     return NextResponse.json({ error: "Invalid invite payload", details: String(error) }, { status: 400 });
@@ -79,29 +82,27 @@ export async function PATCH(req: Request) {
     if (!invite) return NextResponse.json({ error: "Invite not found" }, { status: 404 });
 
     if (input.action === "revoke") {
-      const updated = await db.inviteToken.update({
-        where: { id: invite.id },
-        data: { revokedAt: new Date(), revokedById: auth.user.id },
-      });
-      await logAudit({
-        actorId: auth.user.id,
-        action: "INVITE_REVOKED",
-        targetType: "InviteToken",
-        targetId: invite.id,
-        metadata: { before: invite, after: updated },
-      });
+      const updated = await db.inviteToken.update({ where: { id: invite.id }, data: { revokedAt: new Date(), revokedById: auth.user.id } });
+      await logAudit({ actorId: auth.user.id, action: "INVITE_REVOKED", targetType: "InviteToken", targetId: invite.id, metadata: { before: invite, after: updated } });
       return NextResponse.json(updated);
     }
 
+    if (invite.lastSentAt && Date.now() - new Date(invite.lastSentAt).getTime() < 60_000) {
+      return NextResponse.json({ error: "Invite resend cooldown active (60s)" }, { status: 429 });
+    }
+
+    const rl = await checkRateLimit({ scope: "invite:resend", key: auth.user.id, limit: 30, windowMs: 60 * 60 * 1000 });
+    if (!rl.ok) return NextResponse.json({ error: "Rate limit reached for invite resends" }, { status: 429 });
+
     const inviteUrl = `/login?invite=${invite.token}&email=${encodeURIComponent(invite.email)}`;
     const delivery = await sendInviteEmail({ to: invite.email, inviteUrl, role: invite.role });
-    await logAudit({
-      actorId: auth.user.id,
-      action: "INVITE_RESENT",
-      targetType: "InviteToken",
-      targetId: invite.id,
-      metadata: { delivery, inviteUrl },
+
+    const updated = await db.inviteToken.update({
+      where: { id: invite.id },
+      data: { lastSentAt: new Date(), resendCount: { increment: 1 } },
     });
+
+    await logAudit({ actorId: auth.user.id, action: "INVITE_RESENT", targetType: "InviteToken", targetId: invite.id, metadata: { before: invite, after: updated, delivery, inviteUrl } });
     return NextResponse.json({ ok: true, delivery, inviteUrl });
   } catch (error) {
     return NextResponse.json({ error: "Invalid invite action payload", details: String(error) }, { status: 400 });

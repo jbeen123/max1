@@ -15,64 +15,62 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase8_admin_ops_scaling
+   npx prisma migrate dev --name phase9_security_controls
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 8 added
+## What phase 9 added
 
-- **Invite revoke + resend**
-  - `PATCH /api/admin/invites` with actions `revoke` and `resend`
-  - Invite records now support `revokedAt` and `revokedById`
-- **Invite email delivery integration**
-  - Added `lib/notify.ts` with Resend provider support
-  - Invite create/resend attempts delivery and logs outcome
-- **Pagination + search in admin tables**
-  - Users page supports search and paging
-  - Invites page supports paging
-  - Audit page supports paging
-- **Richer audit drill-down**
-  - Detail page now renders before/after diff table when available
-  - Audit API CSV export includes metadata column
+- **Invite rate limiting + cooldowns**
+  - Invite creation limited per admin per hour
+  - Invite resend limited per admin per hour
+  - 60-second resend cooldown per invite token
+- **Cursor pagination for admin APIs**
+  - Users, Invites, and Audit endpoints now support `cursor` + `pageSize`
+- **Audit chain integrity (tamper-evident)**
+  - `AuditLog` now stores `prevHash` + `hash`
+  - `logAudit()` computes HMAC hash chain with `AUDIT_CHAIN_SECRET`
+- **Operational rate-limit ledger**
+  - `RateLimitEvent` model tracks control events for throttling decisions
 
 ## API highlights
 
-### Admin users
-- `GET /api/admin/users?page=1&pageSize=20&q=search`
+### Admin users (cursor pagination)
+- `GET /api/admin/users?pageSize=20&cursor=<id>&q=search`
 - `PATCH /api/admin/users`
 
-### Admin invites
-- `GET /api/admin/invites?page=1&pageSize=20`
+### Admin invites (cursor pagination + actions)
+- `GET /api/admin/invites?pageSize=20&cursor=<id>`
 - `POST /api/admin/invites`
 - `PATCH /api/admin/invites` (`revoke` | `resend`)
 
-### Audit
-- `GET /api/admin/audit?page=1&pageSize=30`
+### Audit (cursor pagination)
+- `GET /api/admin/audit?pageSize=30&cursor=<id>`
 - `GET /api/admin/audit?format=csv`
 
-### Invite onboarding
-- `POST /api/auth/invite/consume`
+## Data model changes (phase 9)
 
-## Data model changes
+- `InviteToken`
+  - `lastSentAt`
+  - `resendCount`
+- `AuditLog`
+  - `prevHash`
+  - `hash`
+- `RateLimitEvent`
 
-- `InviteToken` now includes:
-  - `revokedAt`
-  - `revokedById`
+## Env vars (new in phase 9)
 
-## Env vars (new in phase 8)
-
-- `RESEND_API_KEY`
-- `INVITE_EMAIL_FROM`
+- `AUDIT_CHAIN_SECRET`
 
 ## Next production tasks
 
-- Add invite resend throttling + cooldowns.
-- Add soft-delete/archive for users and invites.
-- Add cursor-based pagination for very large admin tables.
-- Add email template branding + signed deep links.
+- Add background pruning for `RateLimitEvent` rows.
+- Add endpoint to verify full audit hash chain integrity.
+- Add hard IP-based throttling at edge/load balancer.
+- Add signed/expiring invite links with nonce binding.
 
 ## Legal notes
 

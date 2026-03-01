@@ -16,20 +16,21 @@ type Invite = {
 export default function AdminInvitesPage() {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [msg, setMsg] = useState("");
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [stack, setStack] = useState<string[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const pageSize = 20;
 
-  async function load() {
-    const res = await fetch(`/api/admin/invites?page=${page}&pageSize=${pageSize}`);
+  async function load(c?: string | null) {
+    const res = await fetch(`/api/admin/invites?pageSize=${pageSize}${c ? `&cursor=${c}` : ""}`);
     const data = await res.json();
-    setInvites(Array.isArray(data?.invites) ? data.invites : []);
-    setTotal(Number(data?.total || 0));
+    setInvites(Array.isArray(data?.items) ? data.items : []);
+    setNextCursor(data?.nextCursor ?? null);
   }
 
   useEffect(() => {
     load();
-  }, [page]);
+  }, []);
 
   async function createInvite(formData: FormData) {
     const payload = Object.fromEntries(formData.entries());
@@ -40,7 +41,7 @@ export default function AdminInvitesPage() {
     });
     const data = await res.json();
     setMsg(res.ok ? `Invite URL: ${data.inviteUrl}` : data?.error || "Invite failed");
-    await load();
+    await load(cursor);
   }
 
   async function actionInvite(inviteId: string, action: "revoke" | "resend") {
@@ -51,7 +52,7 @@ export default function AdminInvitesPage() {
     });
     const data = await res.json();
     setMsg(res.ok ? `${action} ok` : data?.error || `${action} failed`);
-    await load();
+    await load(cursor);
   }
 
   return (
@@ -74,20 +75,12 @@ export default function AdminInvitesPage() {
       <div className="card" style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr>
-              <th style={{ textAlign: "left" }}>Email</th>
-              <th style={{ textAlign: "left" }}>Role</th>
-              <th style={{ textAlign: "left" }}>Expires</th>
-              <th style={{ textAlign: "left" }}>State</th>
-              <th style={{ textAlign: "left" }}>Actions</th>
-            </tr>
+            <tr><th>Email</th><th>Role</th><th>Expires</th><th>State</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {invites.map((i) => (
               <tr key={i.id}>
-                <td>{i.email}</td>
-                <td>{i.role}</td>
-                <td>{new Date(i.expiresAt).toLocaleString()}</td>
+                <td>{i.email}</td><td>{i.role}</td><td>{new Date(i.expiresAt).toLocaleString()}</td>
                 <td>{i.revokedAt ? "revoked" : i.consumedAt ? "consumed" : "open"}</td>
                 <td style={{ display: "flex", gap: ".5rem" }}>
                   <button className="ghost" onClick={() => actionInvite(i.id, "resend")}>Resend</button>
@@ -98,8 +91,14 @@ export default function AdminInvitesPage() {
           </tbody>
         </table>
         <div style={{ display: "flex", gap: ".5rem", marginTop: ".75rem" }}>
-          <button className="ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
-          <button className="ghost" disabled={page * pageSize >= total} onClick={() => setPage((p) => p + 1)}>Next</button>
+          <button className="ghost" disabled={stack.length === 0} onClick={() => {
+            const copy = [...stack];
+            const prev = copy.pop() ?? null;
+            setStack(copy); setCursor(prev); load(prev);
+          }}>Prev</button>
+          <button className="ghost" disabled={!nextCursor} onClick={() => {
+            setStack((s) => [...s, cursor ?? ""]); setCursor(nextCursor); load(nextCursor);
+          }}>Next</button>
         </div>
       </div>
     </section>
