@@ -18,20 +18,23 @@ export default function OpsQueuePage() {
   const [metrics, setMetrics] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [policyHistory, setPolicyHistory] = useState<any[]>([]);
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [msg, setMsg] = useState("");
 
   async function load() {
-    const [list, m, h, ph] = await Promise.all([
+    const [list, m, h, ph, pa] = await Promise.all([
       fetch("/api/admin/ops/queue/replay", { method: "GET" }).then((r) => r.json()).catch(() => ({})),
       fetch("/api/admin/ops/queue/metrics", { method: "GET" }).then((r) => r.json()).catch(() => null),
       fetch("/api/admin/ops/queue/history", { method: "GET" }).then((r) => r.json()).catch(() => ({})),
       fetch("/api/admin/ops/queue/policy-history?queueKey=ATTESTATION_UPLOAD", { method: "GET" }).then((r) => r.json()).catch(() => ({})),
+      fetch("/api/admin/ops/queue/policy-approvals", { method: "GET" }).then((r) => r.json()).catch(() => ({})),
     ]);
     setFailed(Array.isArray(list?.failed) ? list.failed : []);
     setPending(Array.isArray(list?.pending) ? list.pending : []);
     setMetrics(m);
     setHistory(Array.isArray(h?.items) ? h.items : []);
     setPolicyHistory(Array.isArray(ph?.items) ? ph.items : []);
+    setPendingApprovals(Array.isArray(pa?.items) ? pa.items.filter((x: any) => x.status === "PENDING") : []);
   }
 
   useEffect(() => {
@@ -74,6 +77,7 @@ export default function OpsQueuePage() {
       openMs: Number(formData.get("openMs")),
       enabled: formData.get("enabled") === "on",
       alertWebhook: String(formData.get("alertWebhook") || "") || null,
+      submitForApproval: true,
     };
 
     const res = await fetch("/api/admin/ops/queue/config", {
@@ -82,7 +86,7 @@ export default function OpsQueuePage() {
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    setMsg(res.ok ? "Policy updated" : data?.error || "Policy update failed");
+    setMsg(res.ok ? "Policy change submitted for approval" : data?.error || "Policy update failed");
     await load();
   }
 
@@ -95,6 +99,24 @@ export default function OpsQueuePage() {
     });
     const data = await res.json();
     setMsg(res.ok ? `Alert sent: ${data?.sent?.sent ? "yes" : "no"}` : data?.error || "Alert failed");
+  }
+
+  async function approve(id: string) {
+    const res = await fetch(`/api/admin/ops/queue/policy-approvals/${id}/approve`, { method: "POST" });
+    const data = await res.json();
+    setMsg(res.ok ? "Approval applied" : data?.error || "Approve failed");
+    await load();
+  }
+
+  async function reject(id: string) {
+    const res = await fetch(`/api/admin/ops/queue/policy-approvals/${id}/reject`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "Rejected from UI" }),
+    });
+    const data = await res.json();
+    setMsg(res.ok ? "Approval rejected" : data?.error || "Reject failed");
+    await load();
   }
 
   return (
@@ -136,6 +158,21 @@ export default function OpsQueuePage() {
           <button type="submit">Save Policy</button>
           <button type="button" className="ghost" onClick={sendTestAlert}>Send Test Alert</button>
         </form>
+      </div>
+
+      <div className="card">
+        <h3>Pending Policy Approvals</h3>
+        {pendingApprovals.length === 0 ? <p>No pending approvals.</p> : (
+          <ul>
+            {pendingApprovals.map((e) => (
+              <li key={e.id}>
+                {new Date(e.createdAt).toLocaleString()} · {e.queueKey}
+                <button className="ghost" style={{ width: "auto", marginLeft: ".5rem" }} onClick={() => approve(e.id)}>Approve</button>
+                <button className="ghost" style={{ width: "auto", marginLeft: ".5rem" }} onClick={() => reject(e.id)}>Reject</button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="card">

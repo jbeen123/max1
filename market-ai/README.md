@@ -15,63 +15,55 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase18_policy_audit_alert_ops
+   npx prisma migrate dev --name phase19_policy_approval_signed_alerts
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 18 added
+## What phase 19 added
 
-- **Per-queue runtime policy framework (DB-first)**
-  - Queue processor now sources policy from `QueuePolicy` table
-  - Env vars are bootstrap defaults only
-- **Policy change traceability API**
-  - `GET /api/admin/ops/queue/policy-history?queueKey=ATTESTATION_UPLOAD`
-  - Reads `QUEUE_POLICY_UPDATED` entries from audit log
-- **Alert testing endpoint + UI hook**
-  - `POST /api/admin/ops/queue/alerts`
-  - Queue console now has "Send Test Alert"
-- **Latency + policy observability improvements**
-  - Queue metrics include policy and latency percentiles
-  - Prometheus export includes queue latency gauges
-- **Circuit event persistence**
-  - New model: `QueueCircuitEvent` used for open/close timeline
+- **Policy edit approval workflow**
+  - New model: `QueuePolicyApproval`
+  - Policy edits can be submitted for approval instead of immediate apply
+  - Endpoints:
+    - `GET/POST /api/admin/ops/queue/policy-approvals`
+    - `POST /api/admin/ops/queue/policy-approvals/:id/approve`
+    - `POST /api/admin/ops/queue/policy-approvals/:id/reject`
+  - `PATCH /api/admin/ops/queue/config` now submits approval by default
+- **Signed queue alerts**
+  - Alert payloads now support HMAC signature header:
+    - `x-marketai-signature`
+  - Signature secret: `QUEUE_ALERT_SIGNING_SECRET`
+- **Queue policy governance UI**
+  - `/admin/ops/queue` now shows pending approvals with approve/reject actions
+  - Policy saves now submit approval requests
 
 ## API highlights
 
 - `GET/PATCH /api/admin/ops/queue/config`
-- `GET /api/admin/ops/queue/policy-history`
+- `GET/POST /api/admin/ops/queue/policy-approvals`
+- `POST /api/admin/ops/queue/policy-approvals/:id/approve`
+- `POST /api/admin/ops/queue/policy-approvals/:id/reject`
 - `POST /api/admin/ops/queue/alerts`
-- `GET /api/admin/ops/queue/metrics`
-- `GET /api/admin/ops/queue/metrics/prometheus`
-- `GET /api/admin/ops/queue/history`
 
-## Data model additions (phase 18)
+## Data model additions (phase 19)
 
-- `QueuePolicy`
-- `QueueCircuitEvent`
+- `QueuePolicyApproval`
+- `PolicyApprovalStatus` enum
 
-## Ops UI
+## Env vars (phase 19)
 
-- `/admin/ops/queue` now includes:
-  - runtime policy editor
-  - policy change history
-  - test alert trigger
-  - circuit timeline
-  - latency/circuit metrics
+- `QUEUE_ALERT_SIGNING_SECRET`
 
-## Env vars
-
-- `QUEUE_ALERT_WEBHOOK_URL` (default alert target)
-- `QUEUE_CIRCUIT_FAIL_THRESHOLD` and `QUEUE_CIRCUIT_OPEN_MS` now act as bootstrap defaults if no policy exists yet
+(Existing queue policy/alert vars still apply.)
 
 ## Next production tasks
 
-- Add role-approval workflow for policy edits in production.
-- Add webhook secret signing for alert callbacks.
-- Add metric labels for error categories in Prometheus endpoint.
+- Add multi-admin quorum approvals (2-of-N) for policy activation.
+- Add approver identity constraints (requester cannot self-approve).
+- Add signed alert replay timestamp + nonce validation on receiver side.
 
 ## Legal notes
 

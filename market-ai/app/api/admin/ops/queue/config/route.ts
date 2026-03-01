@@ -10,6 +10,8 @@ const schema = z.object({
   openMs: z.number().int().min(1000).max(60 * 60 * 1000).optional(),
   alertWebhook: z.string().url().nullable().optional(),
   enabled: z.boolean().optional(),
+  submitForApproval: z.boolean().default(true),
+  note: z.string().optional(),
 });
 
 export async function GET(req: Request) {
@@ -19,8 +21,12 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const queueKey = searchParams.get("queueKey") || "ATTESTATION_UPLOAD";
 
-  const config = await db.queuePolicy.findUnique({ where: { queueKey } });
-  return NextResponse.json({ queueKey, config });
+  const [config, pendingApproval] = await Promise.all([
+    db.queuePolicy.findUnique({ where: { queueKey } }),
+    db.queuePolicyApproval.findFirst({ where: { queueKey, status: "PENDING" }, orderBy: { createdAt: "desc" } }),
+  ]);
+
+  return NextResponse.json({ queueKey, config, pendingApproval });
 }
 
 export async function PATCH(req: Request) {
@@ -28,8 +34,30 @@ export async function PATCH(req: Request) {
   if (!auth.ok || !auth.user) return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
   const input = schema.parse(await req.json());
-  const before = await db.queuePolicy.findUnique({ where: { queueKey: input.queueKey } });
 
+  if (input.submitForApproval) {
+    const approval = await db.queuePolicyApproval.create({
+      data: {
+        queueKey: input.queueKey,
+        requestedById: auth.user.id,
+        status: "PENDING",
+        requestPayload: input,
+        note: input.note,
+      },
+    });
+
+    await logAudit({
+      actorId: auth.user.id,
+      action: "QUEUE_POLICY_APPROVAL_REQUESTED",
+      targetType: "QueuePolicyApproval",
+      targetId: approval.id,
+      metadata: input,
+    });
+
+    return NextResponse.json({ queued: true, approvalId: approval.id }, { status: 202 });
+  }
+
+  const before = await db.queuePolicy.findUnique({ where: { queueKey: input.queueKey } });
   const updated = await db.queuePolicy.upsert({
     where: { queueKey: input.queueKey },
     update: {
@@ -52,7 +80,7 @@ export async function PATCH(req: Request) {
     action: "QUEUE_POLICY_UPDATED",
     targetType: "QueuePolicy",
     targetId: input.queueKey,
-    metadata: { before, after: updated },
+    metadata: { before, after: updated, bypassApproval: true },
   });
 
   return NextResponse.json(updated);

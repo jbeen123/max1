@@ -78,6 +78,12 @@ enum UploadJobStatus {
   FAILED
 }
 
+enum PolicyApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id            String        @id @default(cuid())
   email         String        @unique
@@ -323,4 +329,16 @@ model QueuePolicy {
   alertWebhook   String?
   enabled        Boolean  @default(true)
   updatedAt      DateTime @updatedAt
+}
+
+model QueuePolicyApproval {
+  id             String               @id @default(cuid())
+  queueKey       String
+  requestedById  String?
+  approvedById   String?
+  status         PolicyApprovalStatus @default(PENDING)
+  requestPayload Json
+  note           String?
+  createdAt      DateTime             @default(now())
+  decidedAt      DateTime?
 }
