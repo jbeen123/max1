@@ -305,3 +305,13 @@ model QueueCircuitState {
   failCountWindow Int      @default(0)
   updatedAt       DateTime @updatedAt
 }
+
+model QueueCircuitEvent {
+  id         String   @id @default(cuid())
+  queueKey   String
+  eventType  String
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([queueKey, createdAt])
+}

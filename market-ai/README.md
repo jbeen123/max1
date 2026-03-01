@@ -15,25 +15,25 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase15_queue_circuit_metrics
+   npx prisma migrate dev --name phase16_circuit_history_metrics_export
    ```
 4. Run app:
    ```bash
    npm run dev
    ```
 
-## What phase 15 added
+## What phase 16 added
 
-- **DLQ retry reason categorization**
-  - Upload job failures now include `errorCategory`
-  - Categories include: `timeout`, `network`, `auth`, `rate_limit`, `remote_5xx`, `unknown`
-- **Automatic circuit breaker for upload queue**
-  - New `QueueCircuitState` model
-  - Queue opens circuit after repeated failures and cools down for 5 minutes
-  - Processing is skipped while circuit is open
-- **Queue metrics endpoint + widgets**
-  - `GET /api/admin/ops/queue/metrics`
-  - Queue page now shows pending/processing/failed + 24h success/failure + circuit state
+- **Env-configurable queue circuit breaker**
+  - `QUEUE_CIRCUIT_FAIL_THRESHOLD` (default 5)
+  - `QUEUE_CIRCUIT_OPEN_MS` (default 300000)
+- **Circuit history timeline**
+  - New `QueueCircuitEvent` model
+  - New endpoint: `GET /api/admin/ops/queue/history`
+  - Queue console now renders open/close history timeline
+- **Metrics export endpoint (Prometheus)**
+  - New endpoint: `GET /api/admin/ops/queue/metrics/prometheus`
+  - Exposes queue gauges for scraping
 
 ## API highlights
 
@@ -41,22 +41,27 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 - `GET /api/admin/ops/queue/replay`
 - `POST /api/admin/ops/queue/replay`
 - `GET /api/admin/ops/queue/metrics`
-- `POST /api/admin/ops/run-maintenance`
+- `GET /api/admin/ops/queue/metrics/prometheus`
+- `GET /api/admin/ops/queue/history`
 
-## Data model additions (phase 15)
+## Data model additions (phase 16)
 
-- `QueueCircuitState`
-- `UploadJob.errorCategory`
+- `QueueCircuitEvent`
+- `UploadJob.errorCategory` (from phase 15)
+- `QueueCircuitState` continues to track active breaker state
 
 ## Ops UI
 
-- `/admin/ops/queue` now includes metrics widget and circuit status.
+- `/admin/ops/queue` now includes:
+  - metrics + prometheus link
+  - circuit history timeline
+  - DLQ replay controls
 
 ## Next production tasks
 
-- Add configurable circuit thresholds (env-driven).
-- Add circuit open/close history timeline in ops UI.
-- Add Prometheus/OpenTelemetry export for queue metrics.
+- Add per-queue threshold config table in DB (runtime adjustable).
+- Add queue throughput/latency percentiles to metrics endpoint.
+- Add alerting integration for circuit-open events.
 
 ## Legal notes
 

@@ -16,16 +16,19 @@ export default function OpsQueuePage() {
   const [failed, setFailed] = useState<Job[]>([]);
   const [pending, setPending] = useState<Job[]>([]);
   const [metrics, setMetrics] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
   const [msg, setMsg] = useState("");
 
   async function load() {
-    const [list, m] = await Promise.all([
+    const [list, m, h] = await Promise.all([
       fetch("/api/admin/ops/queue/replay", { method: "GET" }).then((r) => r.json()).catch(() => ({})),
       fetch("/api/admin/ops/queue/metrics", { method: "GET" }).then((r) => r.json()).catch(() => null),
+      fetch("/api/admin/ops/queue/history", { method: "GET" }).then((r) => r.json()).catch(() => ({})),
     ]);
     setFailed(Array.isArray(list?.failed) ? list.failed : []);
     setPending(Array.isArray(list?.pending) ? list.pending : []);
     setMetrics(m);
+    setHistory(Array.isArray(h?.items) ? h.items : []);
   }
 
   useEffect(() => {
@@ -82,6 +85,18 @@ export default function OpsQueuePage() {
             <li>Succeeded (24h): {metrics.succeeded24h}</li>
             <li>Failed (24h): {metrics.failed24h}</li>
             <li>Circuit: {metrics?.circuit?.isOpen ? `OPEN until ${metrics?.circuit?.openUntil}` : "CLOSED"}</li>
+            <li>Prometheus: <a href="/api/admin/ops/queue/metrics/prometheus" target="_blank">/api/admin/ops/queue/metrics/prometheus</a></li>
+          </ul>
+        )}
+      </div>
+
+      <div className="card">
+        <h3>Circuit History</h3>
+        {history.length === 0 ? <p>No circuit events.</p> : (
+          <ul>
+            {history.map((e) => (
+              <li key={e.id}>{new Date(e.createdAt).toLocaleString()} · {e.eventType} · {e.reason ?? "-"}</li>
+            ))}
           </ul>
         )}
       </div>

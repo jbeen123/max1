@@ -11,6 +11,9 @@ function categorizeError(error: unknown) {
   return "unknown";
 }
 
+const FAIL_THRESHOLD = Number(process.env.QUEUE_CIRCUIT_FAIL_THRESHOLD || "5");
+const OPEN_MS = Number(process.env.QUEUE_CIRCUIT_OPEN_MS || String(5 * 60 * 1000));
+
 async function getCircuit(queueKey: string) {
   const state = await db.queueCircuitState.findUnique({ where: { queueKey } });
   if (!state) {
@@ -39,10 +42,8 @@ export async function processUploadQueue(limit = 10) {
   }
 
   if (circuit.isOpen && circuit.openUntil && circuit.openUntil <= new Date()) {
-    await db.queueCircuitState.update({
-      where: { queueKey },
-      data: { isOpen: false, openUntil: null, failCountWindow: 0 },
-    });
+    await db.queueCircuitState.update({ where: { queueKey }, data: { isOpen: false, openUntil: null, failCountWindow: 0 } });
+    await db.queueCircuitEvent.create({ data: { queueKey, eventType: "CLOSED", reason: "cooldown_elapsed" } });
   }
 
   const now = new Date();
@@ -69,8 +70,7 @@ export async function processUploadQueue(limit = 10) {
       failuresThisRun += 1;
       const category = categorizeError(error);
       const attempts = job.attempts + 1;
-      const maxAttempts = job.maxAttempts;
-      const exhausted = attempts >= maxAttempts;
+      const exhausted = attempts >= job.maxAttempts;
       const backoffMs = Math.min(60_000 * 30, 1000 * Math.pow(2, attempts));
 
       await db.uploadJob.update({
@@ -89,23 +89,28 @@ export async function processUploadQueue(limit = 10) {
 
   if (failuresThisRun > 0) {
     const nextFailCount = circuit.failCountWindow + failuresThisRun;
-    const shouldOpen = nextFailCount >= 5;
+    const shouldOpen = nextFailCount >= FAIL_THRESHOLD;
+
     await db.queueCircuitState.upsert({
       where: { queueKey },
       update: {
         failCountWindow: shouldOpen ? 0 : nextFailCount,
         isOpen: shouldOpen,
         openedAt: shouldOpen ? new Date() : circuit.openedAt,
-        openUntil: shouldOpen ? new Date(Date.now() + 5 * 60 * 1000) : circuit.openUntil,
+        openUntil: shouldOpen ? new Date(Date.now() + OPEN_MS) : circuit.openUntil,
       },
       create: {
         queueKey,
         failCountWindow: shouldOpen ? 0 : nextFailCount,
         isOpen: shouldOpen,
         openedAt: shouldOpen ? new Date() : null,
-        openUntil: shouldOpen ? new Date(Date.now() + 5 * 60 * 1000) : null,
+        openUntil: shouldOpen ? new Date(Date.now() + OPEN_MS) : null,
       },
     });
+
+    if (shouldOpen) {
+      await db.queueCircuitEvent.create({ data: { queueKey, eventType: "OPENED", reason: `failures>=${FAIL_THRESHOLD}` } });
+    }
   } else if (jobs.length > 0) {
     await db.queueCircuitState.updateMany({ where: { queueKey }, data: { failCountWindow: 0 } });
   }
