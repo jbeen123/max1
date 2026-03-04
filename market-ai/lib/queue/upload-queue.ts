@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { uploadAttestationOffbox } from "@/lib/storage/attestation-upload";
 import { sendQueueAlert } from "@/lib/alerts/queue-alert";
@@ -13,6 +14,10 @@ function categorizeError(error: unknown) {
   return "unknown";
 }
 
+function toJsonValue(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
 async function getCircuit(queueKey: string) {
   const state = await db.queueCircuitState.findUnique({ where: { queueKey } });
   if (!state) {
@@ -26,7 +31,7 @@ export async function enqueueAttestationUpload(attestationId: string, payload: u
   return db.uploadJob.create({
     data: {
       kind: "ATTESTATION_UPLOAD",
-      payload: { attestationId, payload },
+      payload: toJsonValue({ attestationId, payload }),
       status: "PENDING",
       runAfter: new Date(),
     },

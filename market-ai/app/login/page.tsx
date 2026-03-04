@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 
-export default function LoginPage() {
+function LoginPageInner() {
   const [msg, setMsg] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -70,5 +70,13 @@ export default function LoginPage() {
       </form>
       {msg && <p style={{ marginTop: ".75rem" }}>{msg}</p>}
     </section>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<section className="card" style={{ maxWidth: 520, margin: "2rem auto" }}>Loading...</section>}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

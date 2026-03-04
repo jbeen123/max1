@@ -3,6 +3,8 @@ import { ModerationQueue } from "@/components/ModerationQueue";
 import { KycPanel } from "@/components/KycPanel";
 import { IntegrationsPanel } from "@/components/IntegrationsPanel";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const [users, listings, offers, pending, active] = await Promise.all([
     db.user.count(),

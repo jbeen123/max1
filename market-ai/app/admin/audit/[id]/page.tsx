@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 import { requireRole } from "@/lib/auth";
 
 function renderDiff(metadata: unknown) {

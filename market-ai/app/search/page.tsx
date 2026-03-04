@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 import { ComplianceBadge } from "@/components/ComplianceBadge";
 
 export default async function SearchPage() {

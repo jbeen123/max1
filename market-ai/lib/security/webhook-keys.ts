@@ -5,11 +5,14 @@ function parseKeyMapJson(raw: string | undefined): Record<string, string> {
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return {};
-    return Object.fromEntries(
-      Object.entries(parsed)
-        .filter(([k, v]) => typeof k === "string" && typeof v === "string" && k.trim() && v.trim())
-        .map(([k, v]) => [k.trim(), v.trim()]),
-    );
+    const entries = Object.entries(parsed as Record<string, unknown>)
+      .filter((entry): entry is [string, string] => {
+        const [k, v] = entry;
+        return typeof k === "string" && typeof v === "string" && k.trim().length > 0 && v.trim().length > 0;
+      })
+      .map(([k, v]) => [k.trim(), v.trim()] as const);
+
+    return Object.fromEntries(entries);
   } catch {
     return {};
   }

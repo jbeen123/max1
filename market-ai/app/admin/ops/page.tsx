@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 import { OpsActions } from "@/components/OpsActions";
 
 export default async function AdminOpsPage() {
