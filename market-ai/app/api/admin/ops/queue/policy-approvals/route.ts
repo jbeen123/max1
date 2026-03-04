@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
+import { canRequestQueuePolicy } from "@/lib/queue/policy-access";
+import { computeApprovalExpiryDate, expireStaleQueuePolicyApprovals } from "@/lib/queue/policy-approval-expiry";
 
 const schema = z.object({
   queueKey: z.string().default("ATTESTATION_UPLOAD"),
@@ -18,6 +20,8 @@ export async function GET() {
   const auth = await requireRole(["ADMIN"]);
   if (!auth.ok) return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
+  await expireStaleQueuePolicyApprovals();
+
   const items = await db.queuePolicyApproval.findMany({
     orderBy: { createdAt: "desc" },
     take: 100,
@@ -29,6 +33,9 @@ export async function GET() {
 export async function POST(req: Request) {
   const auth = await requireRole(["ADMIN"]);
   if (!auth.ok || !auth.user) return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  if (!canRequestQueuePolicy(auth.user)) {
+    return NextResponse.json({ error: "Not authorized to request queue policy changes" }, { status: 403 });
+  }
 
   const input = schema.parse(await req.json());
   const approval = await db.queuePolicyApproval.create({
@@ -39,6 +46,7 @@ export async function POST(req: Request) {
       requestPayload: input,
       note: input.note,
       requiredVotes: input.requiredVotes ?? Number(process.env.QUEUE_POLICY_REQUIRED_VOTES || "2"),
+      expiresAt: computeApprovalExpiryDate(),
     },
   });
 

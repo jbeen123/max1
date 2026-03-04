@@ -341,9 +341,12 @@ model QueuePolicyApproval {
   note           String?
   requiredVotes  Int                  @default(2)
   createdAt      DateTime             @default(now())
+  expiresAt      DateTime?
   decidedAt      DateTime?
 
   votes          QueuePolicyApprovalVote[]
+
+  @@index([status, expiresAt])
 }
 
 model QueuePolicyApprovalVote {

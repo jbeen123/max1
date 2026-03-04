@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { verifySignedWebhook } from "@/lib/security/webhook-verify";
+import { getWebhookSigningKeys } from "@/lib/security/webhook-keys";
 
 export async function POST(req: Request) {
   const auth = await requireRole(["ADMIN"]);
@@ -13,7 +14,8 @@ export async function POST(req: Request) {
     ts: req.headers.get("x-marketai-ts"),
     nonce: req.headers.get("x-marketai-nonce"),
     signature: req.headers.get("x-marketai-signature"),
-    secret: process.env.QUEUE_ALERT_SIGNING_SECRET,
+    kid: req.headers.get("x-marketai-kid"),
+    keyRing: getWebhookSigningKeys(),
     maxAgeMs: 5 * 60 * 1000,
   });
 

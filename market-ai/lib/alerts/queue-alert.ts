@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { signWebhookEnvelope } from "@/lib/security/webhook-signing";
+import { getActiveWebhookSigningKey } from "@/lib/security/webhook-keys";
 
 export async function sendQueueAlert(params: {
   queueKey: string;
@@ -16,10 +17,10 @@ export async function sendQueueAlert(params: {
     at: new Date().toISOString(),
   };
 
-  const secret = process.env.QUEUE_ALERT_SIGNING_SECRET || "";
+  const signingKey = getActiveWebhookSigningKey();
   const ts = String(Date.now());
   const nonce = crypto.randomUUID();
-  const signature = secret ? signWebhookEnvelope(payload, ts, nonce, secret) : undefined;
+  const signature = signingKey ? signWebhookEnvelope(payload, ts, nonce, signingKey.secret) : undefined;
 
   const res = await fetch(url, {
     method: "POST",
@@ -27,7 +28,7 @@ export async function sendQueueAlert(params: {
       "Content-Type": "application/json",
       "x-marketai-ts": ts,
       "x-marketai-nonce": nonce,
-      ...(signature ? { "x-marketai-signature": signature } : {}),
+      ...(signature ? { "x-marketai-signature": signature, "x-marketai-kid": signingKey?.kid || "legacy" } : {}),
     },
     body: JSON.stringify(payload),
   });
@@ -37,5 +38,5 @@ export async function sendQueueAlert(params: {
     return { sent: false, reason: text } as const;
   }
 
-  return { sent: true, signed: !!signature, ts, nonce } as const;
+  return { sent: true, signed: !!signature, ts, nonce, kid: signingKey?.kid } as const;
 }

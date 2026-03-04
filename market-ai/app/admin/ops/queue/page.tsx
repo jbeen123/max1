@@ -168,7 +168,7 @@ export default function OpsQueuePage() {
           <ul>
             {pendingApprovals.map((e) => (
               <li key={e.id}>
-                {new Date(e.createdAt).toLocaleString()} · {e.queueKey} · votes {(e.votes?.length ?? 0)}/{e.requiredVotes}
+                {new Date(e.createdAt).toLocaleString()} · {e.queueKey} · votes {(e.votes?.length ?? 0)}/{e.requiredVotes} · expires {e.expiresAt ? new Date(e.expiresAt).toLocaleString() : "n/a"}
                 <button className="ghost" style={{ width: "auto", marginLeft: ".5rem" }} onClick={() => approve(e.id)}>Approve</button>
                 <button className="ghost" style={{ width: "auto", marginLeft: ".5rem" }} onClick={() => reject(e.id)}>Reject</button>
               </li>

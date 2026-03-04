@@ -15,7 +15,7 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 3. Generate Prisma client + run migration:
    ```bash
    npm run prisma:generate
-   npx prisma migrate dev --name phase20_quorum_approval_webhook_replay
+   npx prisma migrate dev --name phase21_policy_expiry_role_separation_webhook_key_rotation
    ```
 4. Run app:
    ```bash
@@ -57,11 +57,30 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 - `QUEUE_POLICY_REQUIRED_VOTES`
 - `QUEUE_ALERT_SIGNING_SECRET`
 
+## What phase 21 added
+
+- **Requester/approver separation controls**
+  - New env-controlled allowlists:
+    - `QUEUE_POLICY_REQUESTER_EMAILS`
+    - `QUEUE_POLICY_APPROVER_EMAILS`
+    - `QUEUE_POLICY_APPROVER_DOMAINS`
+  - Policy change submission and approval/rejection can now be split across different teams/groups.
+- **Automatic expiration for stale pending approvals**
+  - New `QueuePolicyApproval.expiresAt` field.
+  - Pending approvals now auto-expire into `REJECTED` when stale.
+  - TTL configurable via `QUEUE_POLICY_APPROVAL_TTL_HOURS`.
+- **Rotating webhook signing keys + key-id header support**
+  - New keyring env vars:
+    - `QUEUE_ALERT_SIGNING_KEYS_JSON`
+    - `QUEUE_ALERT_SIGNING_KEY_ID`
+  - Alert sender now includes `x-marketai-kid` alongside signature headers.
+  - Receiver can verify using key-id-aware keyring lookup.
+
 ## Next production tasks
 
-- Add strict separation of requester/approver roles by team/group.
-- Add automatic expiration for stale pending approvals.
-- Add rotating webhook signing keys with key-id headers.
+- Add explicit team/group entities in DB (instead of env-based allowlists).
+- Add dedicated cron/scheduler endpoint to expire stale approvals proactively.
+- Add admin UI controls for webhook key rotation + health checks.
 
 ## Legal notes
 
