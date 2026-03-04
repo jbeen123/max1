@@ -41,6 +41,8 @@ export async function POST(req: Request) {
       metadata: { propertyId: input.propertyId, flow: "seller_payout" },
     });
 
+    const transferPayload = JSON.parse(JSON.stringify(transfer));
+
     const saved = await db.payout.create({
       data: {
         propertyId: input.propertyId,
@@ -49,7 +51,7 @@ export async function POST(req: Request) {
         amount: input.amount,
         currency: input.currency.toLowerCase(),
         status: "IN_TRANSIT",
-        rawPayload: transfer,
+        rawPayload: transferPayload,
       },
     });
 

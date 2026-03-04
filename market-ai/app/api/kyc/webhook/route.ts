@@ -28,9 +28,10 @@ export async function POST(req: Request) {
   const idemp = await ensureWebhookNotProcessed("kyc", eventKey, "kyc.status", event);
   if (idemp.duplicate) return NextResponse.json({ received: true, duplicate: true });
 
+  const eventPayload = JSON.parse(JSON.stringify(event));
   const updated = await db.kycSession.update({
     where: { externalId: event.sessionId },
-    data: { status: event.status, rawPayload: event },
+    data: { status: event.status, rawPayload: eventPayload },
     include: { user: true },
   });
 

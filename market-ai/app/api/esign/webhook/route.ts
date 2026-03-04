@@ -27,9 +27,10 @@ export async function POST(req: Request) {
   const idemp = await ensureWebhookNotProcessed("esign", eventKey, "esign.status", event);
   if (idemp.duplicate) return NextResponse.json({ received: true, duplicate: true });
 
+  const eventPayload = JSON.parse(JSON.stringify(event));
   const updated = await db.eSignEnvelope.update({
     where: { externalId: event.envelopeId },
-    data: { status: event.status, rawPayload: event },
+    data: { status: event.status, rawPayload: eventPayload },
   });
 
   if (event.status === "COMPLETED") {

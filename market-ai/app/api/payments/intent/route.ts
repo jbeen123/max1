@@ -47,13 +47,15 @@ export async function POST(req: Request) {
       },
     });
 
+    const intentPayload = JSON.parse(JSON.stringify(intent));
+
     await db.dealTransaction.upsert({
       where: { stripeIntentId: intent.id },
       update: {
         amount: input.amount,
         currency: input.currency.toLowerCase(),
         clientSecret: intent.client_secret,
-        rawPayload: intent,
+        rawPayload: intentPayload,
       },
       create: {
         propertyId: input.propertyId,
@@ -62,7 +64,7 @@ export async function POST(req: Request) {
         currency: input.currency.toLowerCase(),
         status: "REQUIRES_PAYMENT_METHOD",
         clientSecret: intent.client_secret,
-        rawPayload: intent,
+        rawPayload: intentPayload,
       },
     });
 

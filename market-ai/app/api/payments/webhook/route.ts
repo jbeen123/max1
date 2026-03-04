@@ -23,18 +23,20 @@ export async function POST(req: Request) {
 
     if (event.type === "payment_intent.succeeded") {
       const intent = event.data.object as Stripe.PaymentIntent;
+      const intentPayload = JSON.parse(JSON.stringify(intent));
       await db.dealTransaction.updateMany({
         where: { stripeIntentId: intent.id },
-        data: { status: "SUCCEEDED", rawPayload: intent },
+        data: { status: "SUCCEEDED", rawPayload: intentPayload },
       });
       await logAudit({ action: "PAYMENT_SUCCEEDED", targetType: "DealTransaction", targetId: intent.id, metadata: { eventId: event.id } });
     }
 
     if (event.type === "payment_intent.payment_failed") {
       const intent = event.data.object as Stripe.PaymentIntent;
+      const intentPayload = JSON.parse(JSON.stringify(intent));
       await db.dealTransaction.updateMany({
         where: { stripeIntentId: intent.id },
-        data: { status: "FAILED", rawPayload: intent },
+        data: { status: "FAILED", rawPayload: intentPayload },
       });
       await logAudit({ action: "PAYMENT_FAILED", targetType: "DealTransaction", targetId: intent.id, metadata: { eventId: event.id } });
     }

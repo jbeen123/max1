@@ -34,6 +34,8 @@ export async function POST(req: Request) {
       capabilities: { transfers: { requested: true } },
     });
 
+    const accountPayload = JSON.parse(JSON.stringify(account));
+
     await db.payoutAccount.upsert({
       where: { userId: input.userId },
       update: {
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
         detailsSubmitted: account.details_submitted,
         chargesEnabled: account.charges_enabled,
         payoutsEnabled: account.payouts_enabled,
-        rawPayload: account,
+        rawPayload: accountPayload,
       },
       create: {
         userId: input.userId,
@@ -49,7 +51,7 @@ export async function POST(req: Request) {
         detailsSubmitted: account.details_submitted,
         chargesEnabled: account.charges_enabled,
         payoutsEnabled: account.payouts_enabled,
-        rawPayload: account,
+        rawPayload: accountPayload,
       },
     });
 

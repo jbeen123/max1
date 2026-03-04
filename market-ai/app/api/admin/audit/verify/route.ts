@@ -12,7 +12,7 @@ export async function GET() {
 
   let prevHash: string | null = null;
   for (const log of logs) {
-    const payload = JSON.stringify({
+    const payload: string = JSON.stringify({
       actorId: log.actorId ?? null,
       action: log.action,
       targetType: log.targetType,
