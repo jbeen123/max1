@@ -82,6 +82,11 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 - ✅ Added dedicated scheduler-friendly endpoint to expire stale approvals proactively:
   - `POST /api/admin/ops/queue/policy-approvals/expire`
   - Supports ADMIN auth or trusted edge (`x-edge-secret`), and uses an ops lock to avoid concurrent runs.
+  - Helper script: `scripts/cron-phase21-expire-approvals.sh`
+  - Example crontab (hourly):
+    ```cron
+    0 * * * * cd /home/jahffy/.openclaw/workspace/market-ai && EDGE_SHARED_SECRET='your-secret' BASE_URL='http://localhost:3000' ./scripts/cron-phase21-expire-approvals.sh >> /tmp/marketai-phase21-cron.log 2>&1
+    ```
 - Add admin UI controls for webhook key rotation + health checks.
 
 ## Legal notes
