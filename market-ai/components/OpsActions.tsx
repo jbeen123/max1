@@ -18,6 +18,7 @@ export function OpsActions() {
         <button onClick={() => hit("/api/admin/ops/run-maintenance")}>Run Maintenance</button>
         <button className="ghost" onClick={() => hit("/api/admin/ops/attest-audit")}>Create Attestation</button>
         <button className="ghost" onClick={() => hit("/api/admin/ops/attest-audit/upload")}>Upload Attestation</button>
+        <button className="ghost" onClick={() => hit("/api/admin/ops/queue/policy-approvals/expire")}>Expire Stale Approvals</button>
       </div>
       {msg && <p>{msg}</p>}
     </div>

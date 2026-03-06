@@ -79,7 +79,9 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
 ## Next production tasks
 
 - Add explicit team/group entities in DB (instead of env-based allowlists).
-- Add dedicated cron/scheduler endpoint to expire stale approvals proactively.
+- ✅ Added dedicated scheduler-friendly endpoint to expire stale approvals proactively:
+  - `POST /api/admin/ops/queue/policy-approvals/expire`
+  - Supports ADMIN auth or trusted edge (`x-edge-secret`), and uses an ops lock to avoid concurrent runs.
 - Add admin UI controls for webhook key rotation + health checks.
 
 ## Legal notes

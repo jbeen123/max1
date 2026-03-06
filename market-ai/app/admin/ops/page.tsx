@@ -23,6 +23,7 @@ export default async function AdminOpsPage() {
           <li>POST /api/admin/ops/run-maintenance</li>
           <li>POST /api/admin/ops/attest-audit</li>
           <li>POST /api/admin/ops/attest-audit/upload</li>
+          <li>POST /api/admin/ops/queue/policy-approvals/expire</li>
         </ul>
         <p>Last prune: {latestPrune ? latestPrune.createdAt.toISOString() : "never"}</p>
         <p><Link href="/admin/ops/queue">Open Queue Console</Link></p>
