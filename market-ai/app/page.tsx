@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PUBLIC_BUYER_FIELDS, PUBLIC_LAND_FIELDS, PUBLIC_SELLER_FIELDS } from "@/lib/public-info";
 
 const stats = [
   ["Avg. moderation time", "< 4 hours"],
@@ -35,6 +36,17 @@ export default function HomePage() {
         <div className="card"><h3>Buyer flow</h3><p>Filter deals by location and economics, submit offers, negotiate inside deal room.</p></div>
         <div className="card"><h3>Moderation</h3><p>Admin queue approves/rejects pending listings with notes for full traceability.</p></div>
         <div className="card"><h3>Offer negotiation</h3><p>Buyers submit offers, sellers counter, and both sides see offer history clearly.</p></div>
+      </div>
+
+      <div className="card">
+        <h3>Public Information Coverage</h3>
+        <p style={{ color: "#94a3b8" }}>
+          Marketplace now supports public profiles for buyers/sellers and public land details for active listings.
+        </p>
+        <p>
+          Sellers: {PUBLIC_SELLER_FIELDS.length} fields · Buyers: {PUBLIC_BUYER_FIELDS.length} fields · Land: {PUBLIC_LAND_FIELDS.length} fields
+        </p>
+        <Link href="/public-info"><button className="ghost">View Public Info Directory</button></Link>
       </div>
     </section>
   );
