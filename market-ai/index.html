@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Market AI</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --card: #121a33;
+        --text: #e8ecff;
+        --muted: #aab4da;
+        --primary: #6ea8ff;
+        --accent: #7af0c6;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: radial-gradient(circle at 20% 0%, #1a2450 0%, var(--bg) 45%);
+        color: var(--text);
+        min-height: 100vh;
+      }
+
+      .wrap {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 56px 20px;
+      }
+
+      .badge {
+        display: inline-block;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        background: rgba(122, 240, 198, 0.1);
+        border: 1px solid rgba(122, 240, 198, 0.35);
+        padding: 6px 10px;
+        border-radius: 999px;
+      }
+
+      h1 {
+        margin: 14px 0 10px;
+        font-size: clamp(34px, 7vw, 58px);
+        line-height: 1.05;
+      }
+
+      p.lead {
+        color: var(--muted);
+        font-size: clamp(16px, 2.3vw, 20px);
+        max-width: 760px;
+      }
+
+      .cta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 26px;
+      }
+
+      .btn {
+        border: 0;
+        text-decoration: none;
+        font-weight: 700;
+        border-radius: 10px;
+        padding: 12px 16px;
+        display: inline-block;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: #071027;
+      }
+
+      .btn-secondary {
+        background: transparent;
+        border: 1px solid #3a4a84;
+        color: var(--text);
+      }
+
+      .grid {
+        margin-top: 40px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+        border: 1px solid #29345e;
+        border-radius: 14px;
+        padding: 16px;
+      }
+
+      .card h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      footer {
+        margin-top: 42px;
+        font-size: 13px;
+        color: #8f9bc8;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <span class="badge">Market AI</span>
+      <h1>Smarter signals. Faster market decisions.</h1>
+      <p class="lead">
+        Turn raw market noise into clear, actionable insights with AI-powered trend tracking,
+        sentiment analysis, and automated alerts.
+      </p>
+
+      <div class="cta">
+        <a class="btn btn-primary" href="#">Get Started</a>
+        <a class="btn btn-secondary" href="#">View Demo</a>
+      </div>
+
+      <section class="grid">
+        <article class="card">
+          <h3>📈 Live Trend Detection</h3>
+          <p>Spot momentum shifts and emerging narratives before they hit mainstream feeds.</p>
+        </article>
+        <article class="card">
+          <h3>🧠 AI Sentiment Engine</h3>
+          <p>Analyze market sentiment across social, news, and on-chain chatter in one view.</p>
+        </article>
+        <article class="card">
+          <h3>⚡ Instant Alerts</h3>
+          <p>Get notified when critical thresholds and strategy triggers are met.</p>
+        </article>
+      </section>
+
+      <footer>Built for king Jahffy • Ready for Live Server preview</footer>
+    </main>
+  </body>
+</html>
