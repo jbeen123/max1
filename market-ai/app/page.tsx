@@ -48,6 +48,20 @@ export default function HomePage() {
         </p>
         <Link href="/public-info"><button className="ghost">View Public Info Directory</button></Link>
       </div>
+
+      <div className="card" style={{ padding: "1.25rem" }}>
+        <h3>Live Market Snapshot</h3>
+        <p style={{ color: "#94a3b8" }}>Homepage HTML block added for market.ai visibility and status messaging.</p>
+        <div style={{ border: "1px solid #1f2937", borderRadius: "12px", padding: "1rem", background: "#0b1220" }}>
+          <p style={{ margin: 0, fontSize: ".85rem", color: "#93c5fd" }}>System Status</p>
+          <h4 style={{ margin: ".35rem 0 .65rem" }}>Online · Awaiting live data feed connection</h4>
+          <ul style={{ margin: 0, paddingLeft: "1.2rem", color: "#cbd5e1" }}>
+            <li>Domain: market.ai</li>
+            <li>Frontend: Next.js app</li>
+            <li>Realtime: connect WebSocket/API to replace this placeholder</li>
+          </ul>
+        </div>
+      </div>
     </section>
   );
 }
