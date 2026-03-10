@@ -99,6 +99,29 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
     - `GET /api/admin/ops/queue/webhook-health` — live ping + latency check
   - Admin queue page now includes team management UI + key rotation table
 
+## What phase 23 added
+
+- **In-app notification system**
+  - New model: `Notification` with typed events (offer received/accepted/rejected/countered, listing approved/rejected, KYC status, contract events, payment events)
+  - `lib/notifications.ts`: create, bulk create, read/unread queries, mark-as-read, convenience helpers for all major marketplace events
+  - `GET/PATCH /api/notifications` — fetch with unread count, mark individual or all as read
+  - `NotificationBell` component: real-time unread badge, dropdown panel with auto-refresh (30s), click-to-navigate
+  - Wired into root layout nav bar
+- **Buyer ↔ Seller messaging**
+  - New models: `Conversation`, `ConversationParticipant`, `Message`
+  - `lib/messaging.ts`: get-or-create conversations, send messages with participant validation, paginated message history
+  - `GET/POST /api/conversations` — list user's conversations, create new ones (optionally tied to a property)
+  - `GET/POST /api/conversations/:id/messages` — message history + send (auto-notifies other participants)
+  - Full messages UI at `/messages`: conversation sidebar, chat bubbles, real-time send
+- **Auth helper**: added `requireAuth()` (any authenticated user, no role check)
+
+## Data model additions (phase 23)
+
+- `Notification` (typed events, user-scoped, read tracking)
+- `Conversation` (optional property link)
+- `ConversationParticipant` (unique per conversation+user)
+- `Message` (conversation-scoped, sender-tracked)
+
 ## Next production tasks
 
 - ✅ Added dedicated scheduler-friendly endpoint to expire stale approvals proactively:
