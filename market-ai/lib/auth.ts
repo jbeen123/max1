@@ -19,6 +19,12 @@ export async function getCurrentUser() {
   return db.user.findUnique({ where: { id } });
 }
 
+export async function requireAuth() {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false as const, user: null };
+  return { ok: true as const, user };
+}
+
 export async function requireRole(roles: Role[]) {
   const user = await getCurrentUser();
   if (!user || !roles.includes(user.role)) {

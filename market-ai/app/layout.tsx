@@ -2,6 +2,7 @@ import "./globals.css";
 import Link from "next/link";
 import { Providers } from "@/components/Providers";
 import { AuthStatus } from "@/components/AuthStatus";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -21,6 +22,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/admin/invites">Invites</Link>
               <Link href="/admin/audit">Audit Logs</Link>
               <Link href="/admin/ops">Ops</Link>
+              <Link href="/messages">Messages</Link>
+              <NotificationBell />
               <Link href="/login" className="pill">Login</Link>
               <AuthStatus />
             </nav>
