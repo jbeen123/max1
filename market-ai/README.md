@@ -76,9 +76,31 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
   - Alert sender now includes `x-marketai-kid` alongside signature headers.
   - Receiver can verify using key-id-aware keyring lookup.
 
+## What phase 22 added
+
+- **DB-backed policy teams (replaces env allowlists)**
+  - New models: `PolicyTeam`, `PolicyTeamMember`
+  - Teams have a `role` (`REQUESTER` | `APPROVER`) and optional email or `@domain` members
+  - `policy-access.ts` queries DB first; falls back to env vars if no DB teams exist
+  - Full CRUD admin API:
+    - `GET/POST /api/admin/ops/queue/teams`
+    - `GET/PATCH/DELETE /api/admin/ops/queue/teams/:id`
+    - `GET/POST /api/admin/ops/queue/teams/:id/members`
+    - `DELETE /api/admin/ops/queue/teams/:id/members/:memberId`
+- **Webhook key rotation admin UI**
+  - New model: `WebhookSigningKey` (kid, secret, isActive, revokedAt)
+  - `webhook-keys.ts` now checks DB keys first, env vars as fallback
+  - `queue-alert.ts` uses async key lookup (DB-aware)
+  - New API endpoints:
+    - `GET /api/admin/ops/queue/webhook-keys` — list all keys (secrets never exposed)
+    - `POST /api/admin/ops/queue/webhook-keys` — generate + activate new key (secret shown once)
+    - `POST /api/admin/ops/queue/webhook-keys/:kid/activate` — switch active key
+    - `DELETE /api/admin/ops/queue/webhook-keys/:kid` — revoke a key
+    - `GET /api/admin/ops/queue/webhook-health` — live ping + latency check
+  - Admin queue page now includes team management UI + key rotation table
+
 ## Next production tasks
 
-- Add explicit team/group entities in DB (instead of env-based allowlists).
 - ✅ Added dedicated scheduler-friendly endpoint to expire stale approvals proactively:
   - `POST /api/admin/ops/queue/policy-approvals/expire`
   - Supports ADMIN auth or trusted edge (`x-edge-secret`), and uses an ops lock to avoid concurrent runs.
@@ -87,7 +109,7 @@ Compliance-first marketplace scaffold for connecting land/real-estate sellers an
     ```cron
     0 * * * * cd /home/jahffy/.openclaw/workspace/market-ai && EDGE_SHARED_SECRET='your-secret' BASE_URL='http://localhost:3000' ./scripts/cron-phase21-expire-approvals.sh >> /tmp/marketai-phase21-cron.log 2>&1
     ```
-- Add admin UI controls for webhook key rotation + health checks.
+- ✅ Admin UI for webhook key rotation + health checks (phase 22)
 
 ## Legal notes
 

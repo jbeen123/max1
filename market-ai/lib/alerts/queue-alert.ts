@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { signWebhookEnvelope } from "@/lib/security/webhook-signing";
-import { getActiveWebhookSigningKey } from "@/lib/security/webhook-keys";
+import { getActiveSigningKey } from "@/lib/security/webhook-keys";
 
 export async function sendQueueAlert(params: {
   queueKey: string;
@@ -17,7 +17,7 @@ export async function sendQueueAlert(params: {
     at: new Date().toISOString(),
   };
 
-  const signingKey = getActiveWebhookSigningKey();
+  const signingKey = await getActiveSigningKey();
   const ts = String(Date.now());
   const nonce = crypto.randomUUID();
   const signature = signingKey ? signWebhookEnvelope(payload, ts, nonce, signingKey.secret) : undefined;

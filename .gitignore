@@ -1,0 +1,12 @@
+# Only track market-ai project
+*
+!market-ai/
+!market-ai/**
+!.gitignore
+
+# Ignore inside market-ai
+market-ai/node_modules/
+market-ai/.next/
+market-ai/.env
+market-ai/.env.local
+market-ai/tsconfig.tsbuildinfo

@@ -100,6 +100,7 @@ model User {
   payoutAccount PayoutAccount?
   payouts       Payout[]
   invitesSent   InviteToken[] @relation("InvitesSent")
+  matchScores   MatchScore[]  @relation("BuyerMatches")
 }
 
 model Property {
@@ -125,6 +126,8 @@ model Property {
   envelopes          ESignEnvelope[]
   transactions       DealTransaction[]
   payouts            Payout[]
+  matchScores        MatchScore[]
+  leadScore          LeadScore?
 }
 
 model Offer {
@@ -367,4 +370,145 @@ model WebhookNonceUse {
   createdAt  DateTime @default(now())
 
   @@unique([scope, nonce])
+}
+
+// ── AI Matching Engine ────────────────────────────────────────────────────────
+
+model MatchScore {
+  id         String   @id @default(cuid())
+  propertyId String
+  buyerId    String
+  score      Float
+  factors    Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  property   Property @relation(fields: [propertyId], references: [id])
+  buyer      User     @relation("BuyerMatches", fields: [buyerId], references: [id])
+
+  @@unique([propertyId, buyerId])
+}
+
+model LeadScore {
+  id         String   @id @default(cuid())
+  propertyId String   @unique
+  score      Float
+  signals    Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  property   Property @relation(fields: [propertyId], references: [id])
+}
+
+// ── Contract Templates ────────────────────────────────────────────────────────
+
+enum ContractType {
+  PURCHASE_AGREEMENT
+  ASSIGNMENT_CONTRACT
+  OPTION_CONTRACT
+}
+
+enum ContractStatus {
+  DRAFT
+  PENDING_REVIEW
+  SIGNED
+  VOIDED
+}
+
+model ContractTemplate {
+  id        String         @id @default(cuid())
+  name      String
+  type      ContractType
+  state     String?
+  content   String
+  clauses   Json
+  version   String         @default("1.0")
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  contracts GeneratedContract[]
+}
+
+model GeneratedContract {
+  id           String          @id @default(cuid())
+  templateId   String
+  propertyId   String?
+  buyerId      String?
+  sellerId     String?
+  variables    Json
+  finalContent String
+  status       ContractStatus  @default(DRAFT)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  template     ContractTemplate @relation(fields: [templateId], references: [id])
+}
+
+// ── Policy Teams (Phase 22) ───────────────────────────────────────────────
+
+enum PolicyTeamRole {
+  REQUESTER
+  APPROVER
+}
+
+model PolicyTeam {
+  id        String            @id @default(cuid())
+  name      String
+  slug      String            @unique
+  role      PolicyTeamRole
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  members   PolicyTeamMember[]
+}
+
+model PolicyTeamMember {
+  id        String     @id @default(cuid())
+  teamId    String
+  email     String?
+  domain    String?
+  createdAt DateTime   @default(now())
+
+  team      PolicyTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, email])
+  @@unique([teamId, domain])
+  @@index([teamId])
+}
+
+// ── Webhook Signing Keys (Phase 22) ───────────────────────────────────────
+
+model WebhookSigningKey {
+  kid       String   @id
+  secret    String
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+}
+
+// ── Public Records ────────────────────────────────────────────────────────────
+
+model PublicRecord {
+  id                 String   @id @default(cuid())
+  parcelId           String   @unique
+  ownerName          String
+  ownerMailingAddress String
+  propertyAddress    String
+  state              String
+  county             String
+  assessedValue      Int
+  marketValue        Int
+  taxStatus          String
+  zoning             String
+  lotSizeAcres       Float
+  improvements       Json
+  deedHistory        Json
+  liens              Json
+  ownershipDuration  Int
+  isOutOfState       Boolean  @default(false)
+  lastSaleDate       DateTime?
+  lastSalePrice      Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
