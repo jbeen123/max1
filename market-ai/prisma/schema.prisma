@@ -90,6 +90,10 @@ model User {
   name          String?
   role          Role
   state         String?
+  phone         String?
+  company       String?
+  bio           String?
+  avatarUrl     String?
   isVerified    Boolean       @default(false)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -115,6 +119,8 @@ model Property {
   lotSizeAcres       Float?
   askingPrice        Int
   assignmentAllowed  Boolean           @default(false)
+  images             Json?
+  coverImage         String?
   disclosures        Json?
   moderationNotes    String?
   status             ListingStatus     @default(DRAFT)
