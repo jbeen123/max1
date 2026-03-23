@@ -10,8 +10,6 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
     where: { id },
     include: {
       seller: { select: { id: true, name: true, email: true, isVerified: true, phone: true, company: true, bio: true, avatarUrl: true, state: true } },
-      offers: { orderBy: { createdAt: "desc" }, take: 5 },
-      matchScores: { orderBy: { score: "desc" }, take: 3 },
     },
   });
 
@@ -19,7 +17,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
 
   const imgs = Array.isArray(property.images) ? property.images as string[] : [];
   const cover = property.coverImage || imgs[0] || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80";
-  const statusColor = property.status === "ACTIVE" ? "#16a34a" : property.status === "UNDER_CONTRACT" ? "#d97706" : "#6b7280";
+  const statusColor = property.status === "ACTIVE" ? "#16a34a" : property.status === "SOLD" ? "#dc2626" : "#6b7280";
 
   return (
     <section style={{ maxWidth: 1000, margin: "0 auto" }}>
@@ -89,22 +87,6 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
             <h3 style={{ margin: "0 0 .75rem" }}>Property Description</h3>
             <p style={{ color: "#cbd5e1", lineHeight: 1.7, margin: 0 }}>{property.description}</p>
           </div>
-
-          {/* AI Match indicator */}
-          {property.matchScores.length > 0 && (
-            <div className="card" style={{ padding: "1.25rem" }}>
-              <h3 style={{ margin: "0 0 .75rem" }}>🎯 AI Match Score</h3>
-              <p style={{ color: "#94a3b8", fontSize: ".875rem", margin: "0 0 .75rem" }}>Top buyer matches for this property</p>
-              {property.matchScores.map((m) => (
-                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: ".75rem", marginBottom: ".5rem" }}>
-                  <div style={{ flex: 1, background: "#1f2937", borderRadius: 6, height: 8, overflow: "hidden" }}>
-                    <div style={{ width: `${m.score}%`, height: "100%", background: m.score > 75 ? "#16a34a" : m.score > 50 ? "#d97706" : "#6b7280", borderRadius: 6 }} />
-                  </div>
-                  <span style={{ fontSize: ".8rem", fontWeight: 600, minWidth: 40 }}>{Math.round(m.score)}%</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* ── Right column ── */}
@@ -153,17 +135,6 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
               <button className="ghost" style={{ width: "100%" }}>Message Seller</button>
             </Link>
           </div>
-
-          {/* Offers count */}
-          {property.offers.length > 0 && (
-            <div className="card" style={{ padding: "1.25rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
-                <span style={{ fontSize: "1.5rem", fontWeight: 800, color: "#f59e0b" }}>{property.offers.length}</span>
-                <span style={{ color: "#94a3b8", fontSize: ".9rem" }}>Active offer{property.offers.length !== 1 ? "s" : ""} on this property</span>
-              </div>
-              <p style={{ color: "#94a3b8", fontSize: ".8rem", margin: ".5rem 0 0" }}>Move fast — this property is attracting interest.</p>
-            </div>
-          )}
 
         </div>
       </div>

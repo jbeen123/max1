@@ -31,7 +31,7 @@ const createSchema = z.object({
 
 export async function GET() {
   const data = await db.property.findMany({
-    where: { status: { in: ["ACTIVE", "UNDER_CONTRACT", "ASSIGNED"] } },
+    where: { status: { in: ["ACTIVE", "SOLD"] } },
     include: {
       seller: { select: { id: true, name: true, role: true, isVerified: true, state: true } },
     },
@@ -63,28 +63,8 @@ export async function POST(req: Request) {
         zoning: input.zoning,
         sellerId: auth.user.id,
         assignmentAllowed: rule.assignmentAllowed ? input.assignmentAllowed : false,
-        disclosures: {
-          complianceChecklist: rule.checklist,
-          submittedAt: new Date().toISOString(),
-          publicInfo: {
-            seller: {
-              displayName: input.sellerDisplayName || auth.user.name || null,
-              publicContact: input.sellerPublicContact || null,
-              role: auth.user.role,
-              verified: auth.user.isVerified,
-              state: auth.user.state,
-            },
-            land: {
-              city: input.city || null,
-              zipCode: input.zipCode || null,
-              annualTaxes: input.annualTaxes || null,
-              hoa: input.hoa || null,
-              roadAccess: input.roadAccess || null,
-              utilities: input.utilities || null,
-              floodZone: input.floodZone || null,
-            },
-          },
-        },
+        sellerDisplayName: input.sellerDisplayName || auth.user.name || null,
+        sellerPublicContact: input.sellerPublicContact || null,
         status: "PENDING_REVIEW",
       },
     });

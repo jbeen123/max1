@@ -1,17 +1,6 @@
-import { db } from "@/lib/db";
+// Webhook idempotency disabled for MVP - no webhookEvent model in schema
 
 export async function ensureWebhookNotProcessed(source: string, eventKey: string, eventType?: string, payload?: unknown) {
-  try {
-    await db.webhookEvent.create({
-      data: {
-        source,
-        eventKey,
-        eventType,
-        payload: payload as object | undefined,
-      },
-    });
-    return { duplicate: false as const };
-  } catch {
-    return { duplicate: true as const };
-  }
+  // TODO: Re-enable when webhookEvent model is added
+  return { duplicate: false as const };
 }

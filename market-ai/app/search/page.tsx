@@ -12,7 +12,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
   const properties = await db.property.findMany({
     where: {
-      status: { in: ["ACTIVE", "UNDER_CONTRACT"] },
+      status: { in: ["ACTIVE", "SOLD"] },
       ...(state ? { state } : {}),
       ...(zoning ? { zoning } : {}),
       ...(minPrice || maxPrice ? { askingPrice: { gte: minPrice, lte: maxPrice } } : {}),

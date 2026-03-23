@@ -1,140 +1,258 @@
-# market.ai scaffold
+# 🏠 Market-AI
 
 Compliance-first marketplace scaffold for connecting land/real-estate sellers and buyers.
 
-## Quick start
+## 📚 Documentation
 
-1. Copy env file:
-   ```bash
-   cp .env.example .env
-   ```
-2. Install deps:
-   ```bash
-   npm install
-   ```
-3. Generate Prisma client + run migration:
-   ```bash
-   npm run prisma:generate
-   npx prisma migrate dev --name phase21_policy_expiry_role_separation_webhook_key_rotation
-   ```
-4. Run app:
-   ```bash
-   npm run dev
-   ```
+- **[PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)** - Complete folder organization guide
+- **[app/README.md](./app/README.md)** - App routes documentation
+- **[lib/README.md](./lib/README.md)** - Business logic documentation
+- **[components/README.md](./components/README.md)** - Component documentation
+- **[scripts/README.md](./scripts/README.md)** - Automation scripts
+- **[prisma/README.md](./prisma/README.md)** - Database documentation
 
-## What phase 20 added
+---
 
-- **Quorum-based policy approvals (2-of-N style)**
-  - New vote model: `QueuePolicyApprovalVote`
-  - Approvals now gather votes until `requiredVotes` is reached
-  - Policy applies only when quorum is reached
-- **Requester cannot self-approve**
-  - Approval endpoint now blocks requester from voting approval on their own request
-- **Signed alert anti-replay receiver support**
-  - New verifier: `lib/security/webhook-verify.ts`
-  - New nonce registry model: `WebhookNonceUse`
-  - New test receiver endpoint:
-    - `POST /api/admin/ops/queue/alerts/test`
-  - Verifies timestamp window + signature + nonce replay
+## 🚀 Quick Start
 
-## API highlights
+```bash
+# 1. Copy environment file
+cp .env.example .env
 
-- `PATCH /api/admin/ops/queue/config` (submits approval request)
-- `GET/POST /api/admin/ops/queue/policy-approvals`
-- `POST /api/admin/ops/queue/policy-approvals/:id/approve`
-- `POST /api/admin/ops/queue/policy-approvals/:id/reject`
-- `POST /api/admin/ops/queue/alerts`
-- `POST /api/admin/ops/queue/alerts/test`
+# 2. Install dependencies
+npm install
 
-## Data model additions (phase 20)
+# 3. Generate Prisma client
+npm run prisma:generate
 
-- `QueuePolicyApprovalVote`
-- `WebhookNonceUse`
-- `QueuePolicyApproval.requiredVotes`
+# 4. Run database migrations
+npx prisma migrate dev
 
-## Env vars (phase 20)
+# 5. Seed the database (optional)
+node scripts/seed-realistic.js
 
-- `QUEUE_POLICY_REQUIRED_VOTES`
-- `QUEUE_ALERT_SIGNING_SECRET`
+# 6. Start development server
+npm run dev
+```
 
-## What phase 21 added
+---
 
-- **Requester/approver separation controls**
-  - New env-controlled allowlists:
-    - `QUEUE_POLICY_REQUESTER_EMAILS`
-    - `QUEUE_POLICY_APPROVER_EMAILS`
-    - `QUEUE_POLICY_APPROVER_DOMAINS`
-  - Policy change submission and approval/rejection can now be split across different teams/groups.
-- **Automatic expiration for stale pending approvals**
-  - New `QueuePolicyApproval.expiresAt` field.
-  - Pending approvals now auto-expire into `REJECTED` when stale.
-  - TTL configurable via `QUEUE_POLICY_APPROVAL_TTL_HOURS`.
-- **Rotating webhook signing keys + key-id header support**
-  - New keyring env vars:
-    - `QUEUE_ALERT_SIGNING_KEYS_JSON`
-    - `QUEUE_ALERT_SIGNING_KEY_ID`
-  - Alert sender now includes `x-marketai-kid` alongside signature headers.
-  - Receiver can verify using key-id-aware keyring lookup.
+## 📁 Project Structure
 
-## What phase 22 added
+```
+market-ai/
+├── 📱 app/                    # Next.js App Router (pages & API)
+│   ├── admin/                 # Admin dashboard
+│   ├── api/                   # API routes
+│   ├── dashboard/             # User dashboard
+│   ├── land-scanner/          # AI land scanning
+│   ├── login/                 # Authentication
+│   └── ...
+├── 🧩 components/             # Shared React components
+├── 🔧 lib/                    # Business logic & utilities
+│   ├── ai/                    # AI/ML services
+│   ├── contracts/             # Contract management
+│   ├── queue/                 # Job queue
+│   ├── security/              # Security utilities
+│   └── ...
+├── 🗄️ prisma/                 # Database schema & migrations
+├── 🔨 scripts/                # Automation & seeding
+└── 📖 docs/                   # Documentation
+```
 
-- **DB-backed policy teams (replaces env allowlists)**
-  - New models: `PolicyTeam`, `PolicyTeamMember`
-  - Teams have a `role` (`REQUESTER` | `APPROVER`) and optional email or `@domain` members
-  - `policy-access.ts` queries DB first; falls back to env vars if no DB teams exist
-  - Full CRUD admin API:
-    - `GET/POST /api/admin/ops/queue/teams`
-    - `GET/PATCH/DELETE /api/admin/ops/queue/teams/:id`
-    - `GET/POST /api/admin/ops/queue/teams/:id/members`
-    - `DELETE /api/admin/ops/queue/teams/:id/members/:memberId`
+---
+
+## 🏗️ Architecture Overview
+
+### Core Features
+- **🔍 AI Land Scanner** - Automated land opportunity detection
+- **🤝 Matching Engine** - AI-powered buyer-property matching
+- **💬 Messaging** - Buyer-seller communication
+- **🔔 Notifications** - In-app notification system
+- **📋 Contracts** - E-signature & contract management
+- **💳 Payments** - Stripe integration
+- **✅ Compliance** - KYC & regulatory compliance
+- **👥 Admin** - Team management & policy controls
+
+### Tech Stack
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Database**: PostgreSQL + Prisma ORM
+- **Auth**: NextAuth.js
+- **Styling**: Tailwind CSS
+- **AI**: Custom ML models
+- **Payments**: Stripe
+- **E-sign**: DocuSign
+
+---
+
+## 📊 Feature Phases
+
+<details>
+<summary><strong>Phase 20</strong> - Quorum Approvals & Webhook Security</summary>
+
+- **Quorum-based policy approvals** (2-of-N style)
+  - Vote model: `QueuePolicyApprovalVote`
+  - Requester cannot self-approve
+- **Signed alert anti-replay receiver**
+  - Webhook verification with nonce registry
+  - Test receiver endpoint: `POST /api/admin/ops/queue/alerts/test`
+
+**Env vars**: `QUEUE_POLICY_REQUIRED_VOTES`, `QUEUE_ALERT_SIGNING_SECRET`
+</details>
+
+<details>
+<summary><strong>Phase 21</strong> - Team Separation & Auto-Expiry</summary>
+
+- **Requester/approver separation**
+  - Email/domain allowlists
+- **Automatic expiration** for stale approvals
+  - Configurable TTL: `QUEUE_POLICY_APPROVAL_TTL_HOURS`
+- **Rotating webhook signing keys**
+  - Key-id header support
+  - Keyring: `QUEUE_ALERT_SIGNING_KEYS_JSON`
+
+**Cron**: `scripts/cron-phase21-expire-approvals.sh` (hourly)
+</details>
+
+<details>
+<summary><strong>Phase 22</strong> - DB Teams & Key Rotation UI</summary>
+
+- **DB-backed policy teams** (replaces env allowlists)
+  - Models: `PolicyTeam`, `PolicyTeamMember`
+  - Full CRUD admin API
 - **Webhook key rotation admin UI**
-  - New model: `WebhookSigningKey` (kid, secret, isActive, revokedAt)
-  - `webhook-keys.ts` now checks DB keys first, env vars as fallback
-  - `queue-alert.ts` uses async key lookup (DB-aware)
-  - New API endpoints:
-    - `GET /api/admin/ops/queue/webhook-keys` — list all keys (secrets never exposed)
-    - `POST /api/admin/ops/queue/webhook-keys` — generate + activate new key (secret shown once)
-    - `POST /api/admin/ops/queue/webhook-keys/:kid/activate` — switch active key
-    - `DELETE /api/admin/ops/queue/webhook-keys/:kid` — revoke a key
-    - `GET /api/admin/ops/queue/webhook-health` — live ping + latency check
-  - Admin queue page now includes team management UI + key rotation table
+  - Model: `WebhookSigningKey`
+  - Endpoints: list, generate, activate, revoke
+  - Health check: `GET /api/admin/ops/queue/webhook-health`
+</details>
 
-## What phase 23 added
+<details>
+<summary><strong>Phase 23</strong> - Notifications & Messaging</strong></summary>
 
-- **In-app notification system**
-  - New model: `Notification` with typed events (offer received/accepted/rejected/countered, listing approved/rejected, KYC status, contract events, payment events)
-  - `lib/notifications.ts`: create, bulk create, read/unread queries, mark-as-read, convenience helpers for all major marketplace events
-  - `GET/PATCH /api/notifications` — fetch with unread count, mark individual or all as read
-  - `NotificationBell` component: real-time unread badge, dropdown panel with auto-refresh (30s), click-to-navigate
-  - Wired into root layout nav bar
+- **In-app notifications**
+  - Typed events (offers, KYC, contracts, payments)
+  - `NotificationBell` component with real-time badge
 - **Buyer ↔ Seller messaging**
-  - New models: `Conversation`, `ConversationParticipant`, `Message`
-  - `lib/messaging.ts`: get-or-create conversations, send messages with participant validation, paginated message history
-  - `GET/POST /api/conversations` — list user's conversations, create new ones (optionally tied to a property)
-  - `GET/POST /api/conversations/:id/messages` — message history + send (auto-notifies other participants)
-  - Full messages UI at `/messages`: conversation sidebar, chat bubbles, real-time send
-- **Auth helper**: added `requireAuth()` (any authenticated user, no role check)
+  - Models: `Conversation`, `ConversationParticipant`, `Message`
+  - Full chat UI at `/messages`
+</details>
 
-## Data model additions (phase 23)
+<details>
+<summary><strong>Phase 24</strong> - Contact Info & Images</summary>
 
-- `Notification` (typed events, user-scoped, read tracking)
-- `Conversation` (optional property link)
-- `ConversationParticipant` (unique per conversation+user)
-- `Message` (conversation-scoped, sender-tracked)
+- Extended contact information
+- Image upload support
+</details>
 
-## Next production tasks
+---
 
-- ✅ Added dedicated scheduler-friendly endpoint to expire stale approvals proactively:
-  - `POST /api/admin/ops/queue/policy-approvals/expire`
-  - Supports ADMIN auth or trusted edge (`x-edge-secret`), and uses an ops lock to avoid concurrent runs.
-  - Helper script: `scripts/cron-phase21-expire-approvals.sh`
-  - Example crontab (hourly):
-    ```cron
-    0 * * * * cd /home/jahffy/.openclaw/workspace/market-ai && EDGE_SHARED_SECRET='your-secret' BASE_URL='http://localhost:3000' ./scripts/cron-phase21-expire-approvals.sh >> /tmp/marketai-phase21-cron.log 2>&1
-    ```
-- ✅ Admin UI for webhook key rotation + health checks (phase 22)
+## 🔌 API Highlights
 
-## Legal notes
+### Admin Operations
+```
+GET/POST   /api/admin/ops/queue/policy-approvals
+POST       /api/admin/ops/queue/policy-approvals/:id/approve
+POST       /api/admin/ops/queue/policy-approvals/:id/reject
+POST       /api/admin/ops/queue/policy-approvals/expire
+GET/POST   /api/admin/ops/queue/teams
+GET/POST   /api/admin/ops/queue/webhook-keys
+```
 
-- This is a starter scaffold, not legal advice.
-- Expand compliance rules per state with legal counsel before launch.
+### Core Features
+```
+GET/POST   /api/conversations
+GET/POST   /api/conversations/:id/messages
+GET/PATCH  /api/notifications
+GET/POST   /api/properties
+GET/POST   /api/matches
+```
+
+---
+
+## ⚙️ Environment Variables
+
+### Required
+```bash
+DATABASE_URL="postgresql://..."
+NEXTAUTH_SECRET="your-secret"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+### Feature Flags
+```bash
+# Phase 20+
+QUEUE_POLICY_REQUIRED_VOTES=2
+QUEUE_ALERT_SIGNING_SECRET="secret"
+
+# Phase 21+
+QUEUE_POLICY_APPROVAL_TTL_HOURS=24
+QUEUE_ALERT_SIGNING_KEYS_JSON='[{"kid":"key1","secret":"secret1"}]'
+
+# Phase 22+
+# Teams now in DB - no env vars needed
+```
+
+See `.env.example` for complete list.
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run unit tests
+npm test
+
+# Run e2e tests
+npm run test:e2e
+
+# Run specific test
+npm test -- matching.test.ts
+```
+
+---
+
+## 🚢 Deployment
+
+### Production Checklist
+- [ ] Set `NODE_ENV=production`
+- [ ] Configure `DATABASE_URL` with production DB
+- [ ] Set strong `NEXTAUTH_SECRET`
+- [ ] Configure webhook endpoints
+- [ ] Set up cron jobs (see scripts/)
+- [ ] Run `npx prisma migrate deploy`
+- [ ] Seed initial data if needed
+
+### Docker (optional)
+```bash
+docker build -t market-ai .
+docker run -p 3000:3000 --env-file .env market-ai
+```
+
+---
+
+## 📝 Legal Notes
+
+> ⚠️ **Disclaimer**: This is a starter scaffold, not legal advice.
+> Expand compliance rules per state with legal counsel before launch.
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+---
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
+
+---
+
+<p align="center">
+  Built with ❤️ for the land investment community
+</p>

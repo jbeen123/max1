@@ -30,8 +30,7 @@ export async function POST(req: Request) {
     const updated = await db.property.update({
       where: { id: input.propertyId },
       data: {
-        status: input.action === "APPROVE" ? "ACTIVE" : "REJECTED",
-        moderationNotes: input.moderationNotes,
+        status: input.action === "APPROVE" ? "ACTIVE" : "ARCHIVED",
       },
     });
     return NextResponse.json(updated);

@@ -1,0 +1,65 @@
+// Add these models to your existing schema.prisma
+
+enum SubscriptionStatus {
+  TRIALING      // 3-day free trial
+  ACTIVE        // Paid subscription
+  PAST_DUE      // Payment failed
+  CANCELED      // User canceled
+  UNPAID        // Payment failed multiple times
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Subscription {
+  id                    String             @id @default(cuid())
+  userId                String             @unique
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  stripeCustomerId      String             @unique
+  stripeSubscriptionId    String             @unique
+  
+  status                SubscriptionStatus @default(TRIALING)
+  trialEndsAt           DateTime?
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  
+  cancelAtPeriodEnd     Boolean            @default(false)
+  canceledAt            DateTime?
+  
+  payments              Payment[]
+  
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  
+  @@index([status])
+  @@index([trialEndsAt])
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  userId                String
+  subscriptionId        String?
+  
+  stripePaymentIntentId String        @unique
+  stripeInvoiceId       String?
+  amount                Int           // in cents
+  currency              String        @default("usd")
+  status                PaymentStatus
+  
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription          Subscription? @relation(fields: [subscriptionId], references: [id])
+  
+  createdAt             DateTime      @default(now())
+  
+  @@index([userId])
+  @@index([subscriptionId])
+}
+
+// Update the User model to include:
+// subscriptions Subscription?
+// payments      Payment[]

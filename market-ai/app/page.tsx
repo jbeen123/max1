@@ -4,11 +4,10 @@ import { db } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [userCount, listingCount, activeCount, offerCount] = await Promise.all([
+  const [userCount, listingCount, activeCount] = await Promise.all([
     db.user.count(),
     db.property.count(),
     db.property.count({ where: { status: "ACTIVE" } }),
-    db.offer.count(),
   ]);
 
   const featured = await db.property.findMany({
@@ -48,7 +47,7 @@ export default async function HomePage() {
         {[
           [String(userCount), "Registered Users"],
           [String(activeCount), "Active Listings"],
-          [String(offerCount), "Offers Made"],
+          [String(listingCount), "Total Listings"],
           ["< 4hr", "Avg. Moderation Time"],
         ].map(([val, label]) => (
           <div key={label} className="card" style={{ textAlign: "center", padding: "1.5rem 1rem" }}>

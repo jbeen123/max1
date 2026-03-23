@@ -13,14 +13,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="brand">market.ai</Link>
             <nav className="nav">
               <Link href="/search">Properties</Link>
-              <Link href="/investors">Investors</Link>
-              <Link href="/deal-room">Deal Room</Link>
+              <Link href="/calculator">Calculator</Link>
+              <Link href="/pricing">Pricing</Link>
               <Link href="/submit">List Property</Link>
-              <Link href="/matches">Matches</Link>
               <Link href="/dashboard">Dashboard</Link>
-              <Link href="/admin/users">Users</Link>
-              <Link href="/admin/audit">Audit Logs</Link>
-              <Link href="/admin/ops">Ops</Link>
               <Link href="/messages">Messages</Link>
               <NotificationBell />
               <Link href="/login" className="pill">Login</Link>

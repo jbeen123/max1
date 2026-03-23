@@ -58,7 +58,7 @@ export async function markAllAsRead(userId: string) {
 export async function notifyOfferReceived(sellerId: string, propertyTitle: string, amount: number, offerId: string) {
   return createNotification({
     userId: sellerId,
-    type: "OFFER_RECEIVED",
+    type: "SYSTEM",
     title: "New Offer Received",
     body: `You received a $${amount.toLocaleString()} offer on "${propertyTitle}"`,
     link: `/deal-room?offer=${offerId}`,
@@ -68,7 +68,7 @@ export async function notifyOfferReceived(sellerId: string, propertyTitle: strin
 export async function notifyOfferAccepted(buyerId: string, propertyTitle: string) {
   return createNotification({
     userId: buyerId,
-    type: "OFFER_ACCEPTED",
+    type: "SYSTEM",
     title: "Offer Accepted!",
     body: `Your offer on "${propertyTitle}" has been accepted`,
     link: "/deal-room",
@@ -78,7 +78,7 @@ export async function notifyOfferAccepted(buyerId: string, propertyTitle: string
 export async function notifyOfferRejected(buyerId: string, propertyTitle: string) {
   return createNotification({
     userId: buyerId,
-    type: "OFFER_REJECTED",
+    type: "SYSTEM",
     title: "Offer Declined",
     body: `Your offer on "${propertyTitle}" was declined`,
     link: "/deal-room",
@@ -88,7 +88,7 @@ export async function notifyOfferRejected(buyerId: string, propertyTitle: string
 export async function notifyOfferCountered(buyerId: string, propertyTitle: string, counterAmount: number) {
   return createNotification({
     userId: buyerId,
-    type: "OFFER_COUNTERED",
+    type: "SYSTEM",
     title: "Counter Offer Received",
     body: `Seller countered with $${counterAmount.toLocaleString()} on "${propertyTitle}"`,
     link: "/deal-room",
@@ -118,11 +118,73 @@ export async function notifyListingRejected(sellerId: string, propertyTitle: str
 export async function notifyKycStatus(userId: string, approved: boolean) {
   return createNotification({
     userId,
-    type: approved ? "KYC_VERIFIED" : "KYC_REJECTED",
+    type: "SYSTEM",
     title: approved ? "Identity Verified" : "Identity Verification Failed",
     body: approved
       ? "Your identity has been verified. You can now transact on the platform."
       : "Your identity verification was not successful. Please try again.",
     link: "/compliance",
+  });
+}
+
+// ── AI Land Scanner Notifications ────────────────────────────────────────
+
+export async function notifyLandDealIdentified(userId: string, dealId: string, propertyAddress: string, profit: number) {
+  return createNotification({
+    userId,
+    type: "SYSTEM",
+    title: "New Land Deal Identified",
+    body: `AI found a new deal at ${propertyAddress} with $${profit.toLocaleString()} potential profit`,
+    link: `/land-scanner/deals/${dealId}`,
+  });
+}
+
+export async function notifyLandDealClaimed(userId: string, dealId: string, propertyAddress: string, claimedByName: string) {
+  return createNotification({
+    userId,
+    type: "SYSTEM",
+    title: "Land Deal Claimed",
+    body: `${claimedByName} claimed the deal at ${propertyAddress}`,
+    link: `/land-scanner/deals/${dealId}`,
+  });
+}
+
+export async function notifyLandOfferGenerated(userId: string, dealId: string, propertyAddress: string, offerAmount: number) {
+  return createNotification({
+    userId,
+    type: "SYSTEM",
+    title: "Offer Generated",
+    body: `New $${offerAmount.toLocaleString()} offer generated for ${propertyAddress}`,
+    link: `/land-scanner/deals/${dealId}`,
+  });
+}
+
+export async function notifyBuyerMatchFound(userId: string, dealId: string, propertyAddress: string, matchScore: number) {
+  return createNotification({
+    userId,
+    type: "SYSTEM",
+    title: "New Buyer Match",
+    body: `Found a ${matchScore}% match for ${propertyAddress}`,
+    link: `/land-scanner/deals/${dealId}`,
+  });
+}
+
+export async function notifyScanCompleted(userId: string, scanId: string, scanName: string, dealsFound: number) {
+  return createNotification({
+    userId,
+    type: "SYSTEM",
+    title: "County Scan Completed",
+    body: `"${scanName}" found ${dealsFound} potential deals`,
+    link: `/land-scanner`,
+  });
+}
+
+export async function notifyCashBuyerVerified(userId: string, buyerName: string) {
+  return createNotification({
+    userId,
+    type: "SYSTEM",
+    title: "Cash Buyer Verified",
+    body: `${buyerName} has been verified as a cash buyer`,
+    link: "/land-scanner/cash-buyers",
   });
 }
