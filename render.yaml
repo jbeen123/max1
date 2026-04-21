@@ -2,7 +2,7 @@ services:
   - type: web
     name: rentkeepers-backend
     runtime: python
-    pythonVersion: 3.11
+    version: 3.11
     buildCommand: cd Projects/rentkeepers && pip install -r requirements.txt
     startCommand: cd Projects/rentkeepers && gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 app:app
     envVars:
