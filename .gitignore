@@ -3,6 +3,7 @@
 !market-ai/
 !market-ai/**
 !.gitignore
+!render.yaml
 
 # Ignore inside market-ai
 market-ai/node_modules/
